@@ -1,7 +1,7 @@
 const {Component} = require('./component');
 const slugid = require('slugid');
 
-class TaskGen extends Component {
+class TickTockTaskGen extends Component {
   constructor({core, queue, taskEvery, taskDuration}) {
     super({core});
     this.queue = queue;
@@ -19,4 +19,4 @@ class TaskGen extends Component {
   }
 }
 
-exports.TaskGen = TaskGen;
+exports.TickTockTaskGen = TickTockTaskGen;

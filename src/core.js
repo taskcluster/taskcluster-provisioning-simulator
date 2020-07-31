@@ -7,21 +7,21 @@ class Core {
       this.log = () => {};
     }
 
-    this.now = new Date(2020, 0, 0).getTime();
+    this._now = new Date(2020, 0, 0).getTime();
     this.queue = new PriorityQueue((a, b) => (b[0] > a[0] ? 1 : b[0] < a[0] ? -1 : 0));
   }
 
   nextTick(cb) {
-    this.queue.enq([this.now, cb]);
+    this.queue.enq([this._now, cb]);
   }
 
   setTimeout(cb, after) {
     const thunk = {cancelled: false};
-    this.queue.enq([this.now + after, () => thunk.cancelled || cb()]);
+    this.queue.enq([this._now + after, () => thunk.cancelled || cb()]);
     return thunk
   }
 
-  cancelTimeout(thunk) {
+  clearTimeout(thunk) {
     thunk.cancelled = true;
   }
 
@@ -35,13 +35,13 @@ class Core {
       cb();
     };
     const schedule = () => {
-      this.queue.enq([this.now + interval, run]);
+      this.queue.enq([this._now + interval, run]);
     }
     schedule();
     return thunk;
   }
 
-  cancelInterval(thunk) {
+  clearInterval(thunk) {
     thunk.cancelled = true;
   }
 
@@ -50,14 +50,18 @@ class Core {
   }
 
   log(message) {
-    console.log(chalk`{yellow ${new Date(this.now).toJSON()} - }${message}`);
+    console.log(chalk`{yellow ${new Date(this._now).toJSON()} - }${message}`);
+  }
+
+  now() {
+    return this._now;
   }
 
   run(runFor) {
-    const stopAt = this.now + runFor;
-    while (this.now < stopAt && this.queue.size() > 0) {
+    const stopAt = this._now + runFor;
+    while (this._now < stopAt && this.queue.size() > 0) {
       const [when, what] = this.queue.deq();
-      this.now = when;
+      this._now = when;
       what();
     }
   }

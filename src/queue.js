@@ -11,8 +11,9 @@ const {Component} = require('./component');
 class Queue extends Component {
   constructor({core}) {
     super({core});
-    this.pendingTasks = [];
-    this.runningTasks = new Map();
+    this.setMaxListeners(100); // potentially lots of workers..
+    this._pendingTasks = [];
+    this._runningTasks = new Map();
   }
 
   /**
@@ -20,7 +21,7 @@ class Queue extends Component {
    * be unique, and the payload should have {duration}.
    */
   createTask(taskId, payload) {
-    this.pendingTasks.push({taskId, payload});
+    this._pendingTasks.push({taskId, payload});
     this.emit('pending', taskId);
   }
 
@@ -29,12 +30,19 @@ class Queue extends Component {
    * 'pending' event from this object and try again.
    */
   claimWork() {
-    if (this.pendingTasks.length > 0) {
-      const task = this.pendingTasks.shift()
+    if (this._pendingTasks.length > 0) {
+      const task = this._pendingTasks.shift()
       this.emit('starting', task.taskId);
-      this.runningTasks.set(task.taskId, task);
+      this._runningTasks.set(task.taskId, task);
       return task;
     }
+  }
+
+  /**
+   * Get the count of pending tasks
+   */
+  pendingTasks() {
+    return this._pendingTasks.length;
   }
 
   /**
@@ -42,7 +50,7 @@ class Queue extends Component {
    */
   resolveTask(taskId) {
     this.emit('resolved', taskId);
-    this.runningTasks.delete(taskId);
+    this._runningTasks.delete(taskId);
   }
 }
 
