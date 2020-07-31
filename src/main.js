@@ -1,22 +1,22 @@
+const chalk = require('chalk');
 const {Core} = require('./core');
-const {TickTockTaskGen} = require('./taskgen');
 const {Queue} = require('./queue');
-const {Worker} = require('./worker');
-const {SimpleEstimateProvisioner} = require('./provisioner');
+const {program} = require('commander');
+const {version} = require('../package.json');
+require('./sims/simple');
 
-const main = () => {
-  const core = new Core({logging: true});
+program.version(version);
 
-  const queue = new Queue({core});
-  new TickTockTaskGen({core, queue, taskEvery: 900, taskDuration: 5000});
-  new SimpleEstimateProvisioner({
-    core, queue,
-    minCapacity: 0,
-    maxCapacity: 5,
-    workerFactory: () => new Worker({core, queue, startupDelay: 2000, idleTimeout: 10000}),
+program
+  .arguments('<simulator>')
+  .action(simName => {
+    const core = new Core({logging: true});
+    const queue = new Queue({core});
+
+    const simulator = require(`./sims/${simName}`);
+    simulator(core, queue);
+
+    core.run(100000);
   });
 
-  core.run(100000);
-};
-
-main();
+program.parse();

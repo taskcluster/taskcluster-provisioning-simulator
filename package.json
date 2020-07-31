@@ -10,6 +10,7 @@
   "license": "MPL-2.0",
   "dependencies": {
     "chalk": "^4.1.0",
+    "commander": "^6.0.0",
     "priorityqueuejs": "^2.0.0",
     "slugid": "^2.0.0"
   }
