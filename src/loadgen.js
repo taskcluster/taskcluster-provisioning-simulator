@@ -1,7 +1,7 @@
 const {Component} = require('./component');
 const slugid = require('slugid');
 
-class TickTockTaskGen extends Component {
+class TickTockLoadGenerator extends Component {
   constructor({core, queue, taskEvery, taskDuration}) {
     super({core});
     this.queue = queue;
@@ -9,7 +9,7 @@ class TickTockTaskGen extends Component {
     this.taskDuration = taskDuration;
 
     // start a task every second
-    this.core.setInterval(() => this.startTask(), this.taskEvery);
+    this.runIntervalId = this.core.setInterval(() => this.startTask(), this.taskEvery);
   }
 
   startTask() {
@@ -17,6 +17,10 @@ class TickTockTaskGen extends Component {
     this.log(`creating task ${taskId}`);
     this.queue.createTask(taskId, {duration: this.taskDuration});
   }
+
+  stop() {
+    this.core.clearInterval(this.runIntervalId);
+  }
 }
 
-exports.TickTockTaskGen = TickTockTaskGen;
+exports.TickTockLoadGenerator = TickTockLoadGenerator;

@@ -1,22 +1,25 @@
 const chalk = require('chalk');
-const {Core} = require('./core');
-const {Queue} = require('./queue');
+const {Simulator} = require('.');
 const {program} = require('commander');
 const {version} = require('../package.json');
-require('./sims/simple');
 
 program.version(version);
 
 program
   .arguments('<simulator>')
   .action(simName => {
-    const core = new Core({logging: true});
-    const queue = new Queue({core});
+    const {loadGeneratorFactory, provisionerFactory} = require(`./sims/${simName}`);
+    const sim = new Simulator({
+      logging: true,
+      loadGeneratorFactory,
+      provisionerFactory,
+    });
 
-    const simulator = require(`./sims/${simName}`);
-    simulator(core, queue);
-
-    core.run(100000);
+    sim.run({
+      rampUpTime: 10000,
+      runTime: 10000,
+      rampDownTime: 10000,
+    });
   });
 
 program.parse();
