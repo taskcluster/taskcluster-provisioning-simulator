@@ -1,0 +1,16 @@
+{
+  "name": "tcsim",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/main.js",
+  "scripts": {
+    "sim": "node src/main.js"
+  },
+  "author": "",
+  "license": "MPL-2.0",
+  "dependencies": {
+    "chalk": "^4.1.0",
+    "priorityqueuejs": "^2.0.0",
+    "slugid": "^2.0.0"
+  }
+}
