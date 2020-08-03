@@ -121,3 +121,5 @@ yarn sim $SIMULATION
 ```
 
 the available simulations are defined in `.js` files in `sims`.
+
+Add `-q` to quiet down the logging.
