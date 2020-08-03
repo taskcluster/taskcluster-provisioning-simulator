@@ -6,7 +6,7 @@ const {version} = require('../package.json');
 program.version(version);
 
 program
-  .arguments('<simulator>')
+  .arguments('<simulation>')
   .action(simName => {
     const {loadGeneratorFactory, provisionerFactory} = require(`./sims/${simName}`);
     const sim = new Simulator({
