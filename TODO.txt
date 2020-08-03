@@ -1,9 +1,1 @@
-* README
-* parent classes for
-  * workers -- with global tracking of number of workers running
-  * provisioner
-  * load generator
-* simulator callback to verify that things are as expected after rampdown
-  (e.g., no running workers or running workers == minCapacity)
 * tests
-* push to TC project

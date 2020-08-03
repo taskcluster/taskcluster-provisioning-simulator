@@ -69,6 +69,10 @@ class Worker extends Component {
   }
 
   finishTask(task) {
+    if (!this.workerRunning) {
+      return;
+    }
+
     this.log(`finished ${task.taskId}`);
     this.queue.resolveTask(task.taskId);
     this.runningTask = null;
