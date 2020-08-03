@@ -4,7 +4,8 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
-    "sim": "node main.js"
+    "sim": "node main.js",
+    "test": "mocha test/*_test.js"
   },
   "author": "",
   "license": "MPL-2.0",
@@ -13,5 +14,8 @@
     "commander": "^6.0.0",
     "priorityqueuejs": "^2.0.0",
     "slugid": "^2.0.0"
+  },
+  "devDependencies": {
+    "mocha": "^8.1.0"
   }
 }
