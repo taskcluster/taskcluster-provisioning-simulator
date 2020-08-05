@@ -22,6 +22,10 @@ To run a simulator, create it and call its `run` method.
 The options to the constructor are:
  * `logging` -- if true (the default), log messages about events to the console
 
+Simulators run in three phases: ramp-up, simulation, and ramp-down.
+The intent of these phases is to allow the system to reach equilibrium (ramp-up) and to verify that the system quiesces (ramp-down).
+Data is stored only for the simulation phase.
+
 To implement a simulator, extend the `Simulator` class in `sims/mysimulator.js` and implement a constructor which sets:
 
  * `this.rampUpTime`
@@ -39,6 +43,8 @@ The parent constructor sets `this.core` and `this.queue` appropriately.
 
 Note that simulations do not do any I/O, and thus run synchronously.
 For especially long or complex runs, it may be beneficial to run the simulation in a worker thread.
+
+A simulator has a `dataStore()` method which returns a datastore containing a record of the simulation phase and any other events needed for context.
 
 ### Core
 
@@ -68,22 +74,26 @@ The queue implements a subset of the Taskcluster queue's functionality.
 * `queue.resolveTask(taskId)` - mark a task as resolved
 * `queue.pendingTasks()` - return the number of pending tasks
 
-The queue instance will emit `pending`, `starting`, and `resolved` messages, with the taskId, when those events occur.
+The queue instance will emit
+* `created`, taskId
+* `started`, taskId, workerId
+* `resolved`, taskId
 
-To claim work, workers should call `queue.claimWork()` and, if nothing is returned, wait for a `pending` message and try again.
+To claim work, workers should call `queue.claimWork()` and, if nothing is returned, wait for a `created` event and try again.
 
 ### Load Generator
 
 A load generator is responsible for injecting tasks (load) into the simulator.
 
-Load generators should inherit from `LoadGenerator`, and should start immediately on construction.
-The `stop` method should stop load generation; this is used at the beginning of the ramp-down period to check that existing tasks are eventually completed.
+Load generators should inherit from `LoadGenerator`, and implement a `start()` method to start simulation.
+The `stop()` method should stop load generation; this is used at the beginning of the ramp-down period to check that existing tasks are eventually completed.
 
 ### Provisioner
 
 A provisioner is responsible for creating workers in response to load (or quantum fluctuations or messages from the beyond).
 
 Provisioner implementations should extend the `Provisioner` class, calling its constructor.
+Provisioning should start when the `start()` method is called.
 Critically, every worker the provisioner creates muts be passed to `this.registerWorker(worker)`.
 
 To de-couple provisioner and worker implementations, provisioners should take a `workerFactory` argument to create a new worker.
@@ -93,6 +103,11 @@ Existing workers (that have not shut down) are stored, by name, in `this.workers
 The provisioner's `stop()` method is called at the end of the ramp-down period to verify that all workers have shut down.
 The default implementation asserts that `this.workers` is empty.
 Subclasses may override this method for more complex checks, such as when there is a `minCapacity` configuration.
+
+The provisioner will emit
+* `requested`, workerId
+* `started`, workerId
+* `shutdown`, workerId
 
 ### Worker
 
@@ -106,6 +121,27 @@ The worker constructor takes the following options:
 * `idleTimeout` -- maximum time the worker will remain idle
 
 A worker has a `name` property giving a unique name for the worker.
+
+## Data and Analysis
+
+A DataStore instance represents the simulation phsae of a simulation run as a sequence of events
+It includes events from the ramp-up and ramp-down phase to provide context (for example, the time a worker or task was created before the simulation began, or the time a task was resolved or a worker shut down after the simulation ended).
+Given a datastore ds, these events are available in `ds.events`.
+
+The events are:
+ * `[timestamp, 'task-created', taskId]`
+ * `[timestamp, 'task-started', taskId, workerId]`
+ * `[timestamp, 'task-resolved', taskId]`
+ * `[timestamp, 'worker-requested', workerId]`
+ * `[timestamp, 'worker-started', workerId]`
+ * `[timestamp, 'worker-shutdown', workerId]`
+
+Times are in ms.
+The simulation always begins at time 0, and its duration is given by `ds.duration`.
+The events from the ramp-up period will have negative timestamps, and events from the ramp-down period will have timestamps greater than `ds.duration`.
+
+The DataStore for a simulation run is available from the simulator's `sim.dataStore()` method.
+DataStores can be serialized by JSON-encoding the result of `ds.asSeriazliable()`, and re-created with `DataStore.fromSerializable(serializable)`.
 
 ## Usage
 
@@ -123,3 +159,4 @@ yarn sim $SIMULATION
 the available simulations are defined in `.js` files in `sims`.
 
 Add `-q` to quiet down the logging.
+Add `-o <output>` to output the simulation data to `<output>`.

@@ -1,6 +1,14 @@
 const assert = require('assert');
 const {Component} = require('./component');
 
+/**
+ * Base class for Provisioners
+ *
+ * This emits:
+ *   'requested', workerId -- when a worker is requested
+ *   'started', workerId -- when a worker starts up and attempts its first claim
+ *   'shutdown', workerId -- when a worker shuts down
+  */
 class Provisioner extends Component {
   constructor({core}) {
     super({core});
@@ -12,10 +20,15 @@ class Provisioner extends Component {
   registerWorker(worker) {
     const name = worker.name;
     this.workers.set(name, worker);
+
+    this.emit('requested', name);
+    worker.once('started', () => this.emit('started', name));
     worker.once('shutdown', () => {
       this.workers.delete(name);
     });
   }
+
+  start() {}
 
   stop() {
     // check that all workers have stopped

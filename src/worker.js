@@ -27,7 +27,7 @@ class Worker extends Component {
 
   start() {
     this.emit('started');
-    this.queue.on('pending', this.loop);
+    this.queue.on('started', this.loop);
     this.core.nextTick(this.loop);
   }
 
@@ -49,7 +49,7 @@ class Worker extends Component {
       return;
     }
 
-    const task = this.queue.claimWork();
+    const task = this.queue.claimWork(this.name);
     if (task) {
       this.log(`claimed ${task.taskId}`);
       this.runningTask = task;
@@ -94,7 +94,7 @@ class Worker extends Component {
   shutdown() {
     this.log('shutting down');
     this.workerRunning = false;
-    this.queue.removeListener('pending', this.loop);
+    this.queue.removeListener('started', this.loop);
     this.emit('shutdown');
   }
 }

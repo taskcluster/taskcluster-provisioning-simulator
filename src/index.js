@@ -3,4 +3,5 @@ module.exports = {
   ...require('./loadgen'),
   ...require('./provisioner'),
   ...require('./worker'),
+  ...require('./datastore'),
 };

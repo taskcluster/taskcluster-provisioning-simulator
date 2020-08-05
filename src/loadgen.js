@@ -6,6 +6,7 @@ class LoadGenerator extends Component {
     this.queue = queue;
   }
 
+  start() {}
   stop() {}
 }
 

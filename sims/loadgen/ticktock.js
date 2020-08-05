@@ -6,7 +6,9 @@ class TickTockLoadGenerator extends LoadGenerator {
     super({core, queue});
     this.taskEvery = taskEvery;
     this.taskDuration = taskDuration;
+  }
 
+  start() {
     // start a task every second
     this.runIntervalId = this.core.setInterval(() => this.startTask(), this.taskEvery);
   }
