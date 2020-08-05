@@ -132,7 +132,7 @@ The events are:
  * `[timestamp, 'task-created', taskId]`
  * `[timestamp, 'task-started', taskId, workerId]`
  * `[timestamp, 'task-resolved', taskId]`
- * `[timestamp, 'worker-requested', workerId]`
+ * `[timestamp, 'worker-requested', workerId, {capacity, utility}]`
  * `[timestamp, 'worker-started', workerId]`
  * `[timestamp, 'worker-shutdown', workerId]`
 

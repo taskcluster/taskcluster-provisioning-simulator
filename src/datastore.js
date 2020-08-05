@@ -89,6 +89,8 @@ class DataStore {
     const resolvedTasks = new Map();
 
     // workerId -> {
+    //   capacity,
+    //   utility,
     //   requestedTime,
     //   startedTime,
     //   shutdownTime,
@@ -144,8 +146,10 @@ class DataStore {
         }
 
         case 'worker-requested': {
-          const [workerId] = rest;
+          const [workerId, {capacity, utility}] = rest;
           requestedWorkers.set(workerId, {
+            capacity,
+            utility,
             requestedTime: time,
             runningTasks: new Map(),
             resolvedTasks: new Map(),

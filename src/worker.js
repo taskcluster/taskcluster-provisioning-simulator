@@ -1,3 +1,4 @@
+const assert = require('assert');
 const crypto = require('crypto');
 const {Component} = require('./component');
 
@@ -9,9 +10,15 @@ const {Component} = require('./component');
  * - 'shutdown' -- when they shut down due to being idle
  */
 class Worker extends Component {
-  constructor({core, queue, startupDelay, idleTimeout}) {
+  constructor({core, queue, startupDelay, idleTimeout, capacity = 1, utility = 1}) {
     super({core, name: `w-${crypto.randomBytes(8).toString('hex')}`});
     this.queue = queue;
+    this.startupDelay = startupDelay;
+    this.idleTimeout = idleTimeout;
+    this.capacity = capacity;
+    this.utility = utility;
+    assert.equal(capacity, 1, 'wait for #3322');
+    assert.equal(utility, 1, 'wait for #3322');
 
     this.workerRunning = true;
 

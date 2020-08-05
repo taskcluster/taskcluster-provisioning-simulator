@@ -16,8 +16,8 @@ suite('DataStore', function() {
       //        t6 is pending when simulation stops
       // wkr6      is starting when the simulation stops
       // wkr7 / t7 is entirely after the simulation
-      [0, 'worker-requested', 'wkr1'],
-      [10, 'worker-requested', 'wkr2'],
+      [0, 'worker-requested', 'wkr1', {capacity: 1, utility: 1}],
+      [10, 'worker-requested', 'wkr2', {capacity: 1, utility: 1}],
       [100, 'task-created', 't1'],
       [130, 'worker-started', 'wkr1'],
       [140, 'task-created', 't2'],
@@ -27,16 +27,16 @@ suite('DataStore', function() {
       [400, 'task-resolved', 't1'],
       [430, 'worker-shutdown', 'wkr1'],
       [440, 'task-created', 't3'],
-      [460, 'worker-requested', 'wkr3'],
+      [460, 'worker-requested', 'wkr3', {capacity: 1, utility: 1}],
       // simulation starts
       [505, 'worker-started', 'wkr3'],
       [510, 'task-resolved', 't2'],
       [530, 'task-started', 't3', 'wkr3'],
       [540, 'task-resolved', 't3'],
       [550, 'worker-shutdown', 'wkr3'],
-      [560, 'worker-requested', 'wkr5'],
+      [560, 'worker-requested', 'wkr5', {capacity: 8, utility: 1}],
       [570, 'worker-started', 'wkr5'],
-      [580, 'worker-requested', 'wkr6'],
+      [580, 'worker-requested', 'wkr6', {capacity: 1, utility: 1}],
       [590, 'task-created', 't4'],
       [600, 'task-started', 't4', 'wkr5'],
       [610, 'task-resolved', 't4'],
@@ -49,7 +49,7 @@ suite('DataStore', function() {
       [840, 'task-resolved', 't6'],
       [850, 'worker-started', 'wkr6'],
       [830, 'task-started', 't6', 'wkr5'],
-      [860, 'worker-requested', 'wkr7'],
+      [860, 'worker-requested', 'wkr7', {capacity: 1, utility: 1}],
       [870, 'task-created', 't7'],
       [880, 'task-started', 't7', 'wkr7'],
       [890, 'worker-shutdown', 'wkr6'],
@@ -63,21 +63,21 @@ suite('DataStore', function() {
     const ds = DataStore.fromRecorder(recorder);
     assert.equal(ds.duration, 300);
     assert.deepEqual(ds.events, [
-      [-490, 'worker-requested', 'wkr2'],
+      [-490, 'worker-requested', 'wkr2', {capacity: 1, utility: 1}],
       [-360, 'task-created', 't2'],
       [-350, 'worker-started', 'wkr2'],
       [-300, 'task-started', 't2', 'wkr2'],
       [-60, 'task-created', 't3'],
-      [-40, 'worker-requested', 'wkr3'],
+      [-40, 'worker-requested', 'wkr3', {capacity: 1, utility: 1}],
       // simulation starts
       [5, 'worker-started', 'wkr3'],
       [10, 'task-resolved', 't2'],
       [30, 'task-started', 't3', 'wkr3'],
       [40, 'task-resolved', 't3'],
       [50, 'worker-shutdown', 'wkr3'],
-      [60, 'worker-requested', 'wkr5'],
+      [60, 'worker-requested', 'wkr5', {capacity: 8, utility: 1}],
       [70, 'worker-started', 'wkr5'],
-      [80, 'worker-requested', 'wkr6'],
+      [80, 'worker-requested', 'wkr6', {capacity: 1, utility: 1}],
       [90, 'task-created', 't4'],
       [100, 'task-started', 't4', 'wkr5'],
       [110, 'task-resolved', 't4'],
@@ -119,13 +119,28 @@ suite('DataStore', function() {
     test('custom metric at 100ms', function() {
       const metrics = ds.calculateMetrics({
         interval: 100,
-        metrics: {custom: state => state.pendingTasks.size + state.runningTasks.size + state.resolvedTasks.size},
+        metrics: {
+          totalCapacity(state) {
+            let total = 0;
+            for (let {capacity} of state.runningWorkers.values()) {
+              total += capacity;
+            }
+            return total;
+          },
+          runningCapacity(state) {
+            let total = 0;
+            for (let {runningTasks} of state.runningWorkers.values()) {
+              total += runningTasks.size;
+            }
+            return total;
+          },
+        },
       });
       assert.deepEqual(metrics, [
-        {time: 0, custom: 2},
-        {time: 100, custom: 3},
-        {time: 200, custom: 5},
-        {time: 300, custom: 5},
+        {time: 0, totalCapacity: 1, runningCapacity: 1},
+        {time: 100, totalCapacity: 9, runningCapacity: 1},
+        {time: 200, totalCapacity: 9, runningCapacity: 1},
+        {time: 300, totalCapacity: 9, runningCapacity: 1},
       ]);
     });
 
