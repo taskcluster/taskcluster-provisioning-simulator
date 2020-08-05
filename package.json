@@ -4,6 +4,7 @@
   "description": "",
   "main": "src/index.js",
   "scripts": {
+    "lint": "eslint src/*.js test/*.js",
     "sim": "node main.js",
     "test": "mocha test/*_test.js"
   },
@@ -12,6 +13,7 @@
   "dependencies": {
     "chalk": "^4.1.0",
     "commander": "^6.0.0",
+    "eslint": "^7.6.0",
     "priorityqueuejs": "^2.0.0",
     "slugid": "^2.0.0"
   },
