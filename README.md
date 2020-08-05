@@ -143,6 +143,94 @@ The events from the ramp-up period will have negative timestamps, and events fro
 The DataStore for a simulation run is available from the simulator's `sim.dataStore()` method.
 DataStores can be serialized by JSON-encoding the result of `ds.asSeriazliable()`, and re-created with `DataStore.fromSerializable(serializable)`.
 
+### CalculateMetrics
+
+While it's perfectly OK to analyze the event stream directly, in many cases the interesting information takes the form of analyses of the state at regular intervals, such as every minute.
+The `ds.calculateMetrics({interval, metrics: { ... }, updateState})` method automates this analysis for you.
+The `interval` parameter gives the interval on which to measure, and the `metrics` parameter gives the metrics that should be calculated at each interval.
+The result is an array of objects of the form
+
+```js
+[
+  {time: <ms>, metric1: .., metric2: ..},
+  ...
+]
+```
+for every time during the simulation phase.
+
+The metrics are functions called with a state, described below.
+There are a few static methods on the DataStore class to calculate some basic things:
+
+ * `DataStore.pendingTasks` -- number of pending tasks
+ * `DataStore.runningTasks` -- number of running tasks
+ * `DataStore.resolvedTasks` -- number of resolved tasks
+ * `DataStore.requestedWorkers` -- number of requested workers (that have not yet started)
+ * `DataStore.runningWorkers` -- number of running workers (including idle workers)
+ * `DataStore.shutdownWorkers` -- number of former workers no longer running
+
+A simple analysis might graph the following
+
+```javascript
+ds.calculateMetrics({
+  interval: 30000, // 30 seconds
+  metrics: {
+    pendingTasks: DataStore.pendingTasks,
+    runningTasks: DataStore.runningTasks,
+    runningWorkers; DataStore.runningWorkers
+  },
+});
+```
+
+It's also possible to write your own metric functions, accepting a state object.
+The `calculateMetrics` method supplies the following state properties:
+
+* `pendingTasks`, `runningTasks`, and `resolvedTasks` -- each a map from taskId to `{createdTime, startedTime, resolvedTime, workerId}`, with properties available as apporpriate.
+* `requestedWorkers`, `runningWorkers`, and `shutdownWorkers` -- each a map from workerId to `{requestedTime, startedTime, shutdownTime, runningTasks, resolvedTasks}`.
+  The `runningTasks` and `resolvedTasks` properties of each worker are similar to the state properties of the same name, but contain only tasks claimed by that worker.
+
+For example a metric function to count idleWorkers might be defined as
+```javascript
+const idleWorkers = state => {
+  let count = 0;
+  for (let {runningTasks} of state.runningWorkers.values()) {
+    if (runningTasks.size === 0) {
+      count++;
+    }
+  }
+  return count;
+};
+```
+
+There's one more level of complexity before completely rolling your own analysis: updating state on each event.
+If `updateState` is passed to `calculateMetrics`, it is called for each event and can update the state as it sees fit.
+It is called after the built-in state is updated.
+The `initialState` parameter is used to initialize the state.
+This function *must not* update any of the predefined state properties.
+
+For example, it might be useful to track workers that have started but never claimed a task:
+```javascript
+ds.calculateMetrics({
+  ...,
+  initialState: {overProvisionedWorkers: new Map()},
+  updateState: (state, [time, name, ...rest]) => {
+    switch (name) {
+      case 'worker-started': {
+        const [workerId] = rest;
+        const worker = state.runningWorkers.get(workerId);
+        state.overProvisionedWorkers.set(workerId, worker);
+        break;
+      }
+
+      case 'task-started': {
+        const [_, workerId] = rest;
+        state.overProvisionedWorkers.delete(workerId);
+        break;
+      }
+    }
+  },
+});
+```
+
 ## Usage
 
 At present, this repository implements a library and contains a runnable command to run simulations.

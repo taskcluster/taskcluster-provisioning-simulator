@@ -73,6 +73,159 @@ class DataStore {
   static fromSerializable(ser) {
     return Object.assign(new DataStore(), ser);
   }
+
+  /**
+   * Calculate metrics with the given interval
+   */
+  calculateMetrics({interval, metrics, updateState, initialState}) {
+    const events = this.events;
+    const duration = this.duration;
+
+    // track the current state as we see events..
+
+    // taskId -> {createdTime, startedTime, resolvedTime, workerId}
+    const pendingTasks = new Map();
+    const runningTasks = new Map();
+    const resolvedTasks = new Map();
+
+    // workerId -> {
+    //   requestedTime,
+    //   startedTime,
+    //   shutdownTime,
+    //   runningTasks: taskId -> {createdTime, startedTime},
+    //   resolvedTasks: taskId -> {createdTime, startedTime, resolvedTime},
+    // }
+    const requestedWorkers = new Map();
+    const runningWorkers = new Map();
+    const shutdownWorkers = new Map();
+
+    const state = {
+      ...initialState,
+      pendingTasks, runningTasks, resolvedTasks,
+      requestedWorkers, runningWorkers, shutdownWorkers,
+    };
+
+    // move a value from one map to another and return it
+    const move = (key, map1, map2) => {
+      const val = map1.get(key);
+      map1.delete(key);
+      map2.set(key, val);
+      return val;
+    };
+
+    const updateBuiltInState = ([time, name, ...rest]) => {
+      switch (name) {
+        case 'task-created': {
+          const [taskId] = rest;
+          pendingTasks.set(taskId, {createdTime: time});
+          break;
+        }
+
+        case 'task-started': {
+          const [taskId, workerId] = rest;
+
+          const task = move(taskId, pendingTasks, runningTasks);
+          task.startedTime = time;
+          task.workerId = workerId;
+
+          const worker = runningWorkers.get(workerId);
+          worker.runningTasks.set(taskId, task);
+          break;
+        }
+
+        case 'task-resolved': {
+          const [taskId] = rest;
+          const task = move(taskId, runningTasks, resolvedTasks);
+          task.resolvedTime = time;
+
+          const worker = runningWorkers.get(task.workerId);
+          move(taskId, worker.runningTasks, worker.resolvedTasks);
+          break;
+        }
+
+        case 'worker-requested': {
+          const [workerId] = rest;
+          requestedWorkers.set(workerId, {
+            requestedTime: time,
+            runningTasks: new Map(),
+            resolvedTasks: new Map(),
+          });
+          break;
+        }
+
+        case 'worker-started': {
+          const [workerId] = rest;
+          const worker = move(workerId, requestedWorkers, runningWorkers);
+          worker.startedTime = time;
+          break;
+        }
+
+        case 'worker-shutdown': {
+          const [workerId] = rest;
+          const worker = move(workerId, runningWorkers, shutdownWorkers);
+          worker.shutdownTime = time;
+          break;
+        }
+      }
+    };
+
+    // ..and generate metrics based on that current state
+
+    const result = [];
+    const generateMetrics = time => {
+      const sample = {time};
+      for (let [m, fn] of Object.entries(metrics)) {
+        sample[m] = fn(state);
+      }
+      result.push(sample);
+    };
+
+    // now loop over events, sampling at the desired time intervals
+
+    let nextTime = 0;
+    let n = this.events.length;
+    for (let i = 0; i < n; i++) {
+      const event = events[i];
+      while (event[0] > nextTime) {
+        generateMetrics(nextTime);
+        nextTime += interval;
+        if (nextTime > duration) {
+          return result;
+        }
+      }
+      updateBuiltInState(event);
+      updateState && updateState(state, event);
+    }
+
+    return result;
+  }
+
+  /**
+   * Utility metrics for calculateMetrics
+   */
+  static pendingTasks(state) {
+    return state.pendingTasks.size;
+  }
+
+  static runningTasks(state) {
+    return state.runningTasks.size;
+  }
+
+  static resolvedTasks(state) {
+    return state.resolvedTasks.size;
+  }
+
+  static requestedWorkers(state) {
+    return state.requestedWorkers.size;
+  }
+
+  static runningWorkers(state) {
+    return state.runningWorkers.size;
+  }
+
+  static shutdownWorkers(state) {
+    return state.shutdownWorkers.size;
+  }
 }
 
 module.exports = {DataStore};
