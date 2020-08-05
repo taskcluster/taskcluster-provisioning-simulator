@@ -43,7 +43,7 @@ class Worker extends Component {
     if (this.runningTask) {
       return;
     }
-    
+
     if (this.idleSince && this.core.now() - this.idleSince >= this.idleTimeout) {
       this.shutdown();
       return;
@@ -55,10 +55,8 @@ class Worker extends Component {
       this.runningTask = task;
       this.stopIdleTimeout();
       this.startTask(task);
-    } else {
-      if (!this.idleTimeoutId) {
-        this.startIdleTimeout();
-      }
+    } else if (!this.idleTimeoutId) {
+      this.startIdleTimeout();
     }
   }
 

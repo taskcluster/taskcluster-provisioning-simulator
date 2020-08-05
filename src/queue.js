@@ -31,7 +31,7 @@ class Queue extends Component {
    */
   claimWork() {
     if (this._pendingTasks.length > 0) {
-      const task = this._pendingTasks.shift()
+      const task = this._pendingTasks.shift();
       this.emit('starting', task.taskId);
       this._runningTasks.set(task.taskId, task);
       return task;

@@ -25,7 +25,7 @@ class Core {
   setTimeout(cb, after) {
     const thunk = {cancelled: false};
     this.queue.enq([this._now + after, () => thunk.cancelled || cb()]);
-    return thunk
+    return thunk;
   }
 
   /**
@@ -51,7 +51,7 @@ class Core {
     };
     const schedule = () => {
       this.queue.enq([this._now + interval, run]);
-    }
+    };
     schedule();
     return thunk;
   }

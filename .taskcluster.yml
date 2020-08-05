@@ -1,0 +1,43 @@
+version: 1
+policy:
+  pullRequests: public
+tasks:
+  $let:
+    should_run:
+      $if: 'tasks_for == "github-pull-request"'
+      then: {$eval: 'event["action"] in ["opened", "reopened", "synchronize"]'}
+      else: {$eval: 'tasks_for == "github-push"'}
+    clone_url:
+      $if: 'tasks_for == "github-pull-request"'
+      then: ${event.pull_request.head.repo.clone_url}
+      else: ${event.repository.clone_url}
+    sha:
+      $if: 'tasks_for == "github-pull-request"'
+      then: ${event.pull_request.head.sha}
+      else: ${event.after}
+  in:
+  - $if: should_run
+    then:
+      provisionerId: proj-taskcluster
+      workerType: ci
+      deadline: {$fromNow: '1 day'}
+      payload:
+        maxRunTime: 3600
+        image: "node:10"
+        command:
+          - /bin/bash
+          - '--login'
+          - '-c'
+          - >-
+            git clone ${clone_url} repo &&
+            cd repo &&
+            git config advice.detachedHead false &&
+            git checkout ${sha} &&
+            yarn &&
+            yarn lint &&
+            yarn test
+      metadata:
+        name: "taskcluster-provisioner-simulator test"
+        description: "Tests and Lint"
+        owner: taskcluster-internal@mozilla.com
+        source: ${clone_url}
