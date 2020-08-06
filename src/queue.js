@@ -1,4 +1,5 @@
 const {Component} = require('./component');
+const assert = require('assert');
 
 /**
  * Simulator for the TC Queue.
@@ -7,6 +8,11 @@ const {Component} = require('./component');
  *  - tasks are only ever pending, running, or completed; no multiple runs, no dependencies, no "scheduled"
  *  - no task priorities
  *  - only one unnamed task queue (=worker pool)
+ *
+ * This emits:
+ *   'created', taskId -- when a task becomes pending
+ *   'started', taskId, workerId -- when a task is claimed
+ *   'resolved', taskId -- when a task is resolved
  */
 class Queue extends Component {
   constructor({core}) {
@@ -22,17 +28,17 @@ class Queue extends Component {
    */
   createTask(taskId, payload) {
     this._pendingTasks.push({taskId, payload});
-    this.emit('pending', taskId);
+    this.emit('created', taskId);
   }
 
   /**
    * Return a pending task, or nothing.  If nothing, then wait for a
-   * 'pending' event from this object and try again.
+   * 'created' event from this object and try again.
    */
-  claimWork() {
+  claimWork(workerId) {
     if (this._pendingTasks.length > 0) {
       const task = this._pendingTasks.shift();
-      this.emit('starting', task.taskId);
+      this.emit('started', task.taskId, workerId);
       this._runningTasks.set(task.taskId, task);
       return task;
     }
@@ -51,6 +57,14 @@ class Queue extends Component {
   resolveTask(taskId) {
     this.emit('resolved', taskId);
     this._runningTasks.delete(taskId);
+  }
+
+  /**
+   * Stop the queue, checking that all tasks are resolved
+   */
+  stop() {
+    assert.deepEqual([...this._pendingTasks.keys()], []);
+    assert.deepEqual([...this._runningTasks.keys()], []);
   }
 }
 

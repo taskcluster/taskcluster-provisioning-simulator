@@ -8,7 +8,7 @@ class Core {
       this.log = () => {};
     }
 
-    this._now = new Date(2020, 0, 0).getTime();
+    this._now = 0;
     this.queue = new PriorityQueue((a, b) => (b[0] > a[0] ? 1 : b[0] < a[0] ? -1 : 0));
   }
 

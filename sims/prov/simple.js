@@ -21,7 +21,9 @@ class SimpleEstimateProvisioner extends Provisioner {
 
     this.requestedWorkers = new Map();
     this.runningWorkers = new Map();
+  }
 
+  start() {
     this.core.setInterval(() => this.loop(), 1000);
   }
 

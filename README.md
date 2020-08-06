@@ -22,6 +22,10 @@ To run a simulator, create it and call its `run` method.
 The options to the constructor are:
  * `logging` -- if true (the default), log messages about events to the console
 
+Simulators run in three phases: ramp-up, simulation, and ramp-down.
+The intent of these phases is to allow the system to reach equilibrium (ramp-up) and to verify that the system quiesces (ramp-down).
+Data is stored only for the simulation phase.
+
 To implement a simulator, extend the `Simulator` class in `sims/mysimulator.js` and implement a constructor which sets:
 
  * `this.rampUpTime`
@@ -39,6 +43,8 @@ The parent constructor sets `this.core` and `this.queue` appropriately.
 
 Note that simulations do not do any I/O, and thus run synchronously.
 For especially long or complex runs, it may be beneficial to run the simulation in a worker thread.
+
+A simulator has a `dataStore()` method which returns a datastore containing a record of the simulation phase and any other events needed for context.
 
 ### Core
 
@@ -68,22 +74,26 @@ The queue implements a subset of the Taskcluster queue's functionality.
 * `queue.resolveTask(taskId)` - mark a task as resolved
 * `queue.pendingTasks()` - return the number of pending tasks
 
-The queue instance will emit `pending`, `starting`, and `resolved` messages, with the taskId, when those events occur.
+The queue instance will emit
+* `created`, taskId
+* `started`, taskId, workerId
+* `resolved`, taskId
 
-To claim work, workers should call `queue.claimWork()` and, if nothing is returned, wait for a `pending` message and try again.
+To claim work, workers should call `queue.claimWork()` and, if nothing is returned, wait for a `created` event and try again.
 
 ### Load Generator
 
 A load generator is responsible for injecting tasks (load) into the simulator.
 
-Load generators should inherit from `LoadGenerator`, and should start immediately on construction.
-The `stop` method should stop load generation; this is used at the beginning of the ramp-down period to check that existing tasks are eventually completed.
+Load generators should inherit from `LoadGenerator`, and implement a `start()` method to start simulation.
+The `stop()` method should stop load generation; this is used at the beginning of the ramp-down period to check that existing tasks are eventually completed.
 
 ### Provisioner
 
 A provisioner is responsible for creating workers in response to load (or quantum fluctuations or messages from the beyond).
 
 Provisioner implementations should extend the `Provisioner` class, calling its constructor.
+Provisioning should start when the `start()` method is called.
 Critically, every worker the provisioner creates muts be passed to `this.registerWorker(worker)`.
 
 To de-couple provisioner and worker implementations, provisioners should take a `workerFactory` argument to create a new worker.
@@ -93,6 +103,11 @@ Existing workers (that have not shut down) are stored, by name, in `this.workers
 The provisioner's `stop()` method is called at the end of the ramp-down period to verify that all workers have shut down.
 The default implementation asserts that `this.workers` is empty.
 Subclasses may override this method for more complex checks, such as when there is a `minCapacity` configuration.
+
+The provisioner will emit
+* `requested`, workerId
+* `started`, workerId
+* `shutdown`, workerId
 
 ### Worker
 
@@ -106,6 +121,115 @@ The worker constructor takes the following options:
 * `idleTimeout` -- maximum time the worker will remain idle
 
 A worker has a `name` property giving a unique name for the worker.
+
+## Data and Analysis
+
+A DataStore instance represents the simulation phsae of a simulation run as a sequence of events
+It includes events from the ramp-up and ramp-down phase to provide context (for example, the time a worker or task was created before the simulation began, or the time a task was resolved or a worker shut down after the simulation ended).
+Given a datastore ds, these events are available in `ds.events`.
+
+The events are:
+ * `[timestamp, 'task-created', taskId]`
+ * `[timestamp, 'task-started', taskId, workerId]`
+ * `[timestamp, 'task-resolved', taskId]`
+ * `[timestamp, 'worker-requested', workerId, {capacity, utility}]`
+ * `[timestamp, 'worker-started', workerId]`
+ * `[timestamp, 'worker-shutdown', workerId]`
+
+Times are in ms.
+The simulation always begins at time 0, and its duration is given by `ds.duration`.
+The events from the ramp-up period will have negative timestamps, and events from the ramp-down period will have timestamps greater than `ds.duration`.
+
+The DataStore for a simulation run is available from the simulator's `sim.dataStore()` method.
+DataStores can be serialized by JSON-encoding the result of `ds.asSeriazliable()`, and re-created with `DataStore.fromSerializable(serializable)`.
+
+### CalculateMetrics
+
+While it's perfectly OK to analyze the event stream directly, in many cases the interesting information takes the form of analyses of the state at regular intervals, such as every minute.
+The `ds.calculateMetrics({interval, metrics: { ... }, updateState})` method automates this analysis for you.
+The `interval` parameter gives the interval on which to measure, and the `metrics` parameter gives the metrics that should be calculated at each interval.
+The result is an array of objects of the form
+
+```js
+[
+  {time: <ms>, metric1: .., metric2: ..},
+  ...
+]
+```
+for every time during the simulation phase.
+
+The metrics are functions called with a state, described below.
+There are a few static methods on the DataStore class to calculate some basic things:
+
+ * `DataStore.pendingTasks` -- number of pending tasks
+ * `DataStore.runningTasks` -- number of running tasks
+ * `DataStore.resolvedTasks` -- number of resolved tasks
+ * `DataStore.requestedWorkers` -- number of requested workers (that have not yet started)
+ * `DataStore.runningWorkers` -- number of running workers (including idle workers)
+ * `DataStore.shutdownWorkers` -- number of former workers no longer running
+
+A simple analysis might graph the following
+
+```javascript
+ds.calculateMetrics({
+  interval: 30000, // 30 seconds
+  metrics: {
+    pendingTasks: DataStore.pendingTasks,
+    runningTasks: DataStore.runningTasks,
+    runningWorkers; DataStore.runningWorkers
+  },
+});
+```
+
+It's also possible to write your own metric functions, accepting a state object.
+The `calculateMetrics` method supplies the following state properties:
+
+* `pendingTasks`, `runningTasks`, and `resolvedTasks` -- each a map from taskId to `{createdTime, startedTime, resolvedTime, workerId}`, with properties available as apporpriate.
+* `requestedWorkers`, `runningWorkers`, and `shutdownWorkers` -- each a map from workerId to `{requestedTime, startedTime, shutdownTime, runningTasks, resolvedTasks}`.
+  The `runningTasks` and `resolvedTasks` properties of each worker are similar to the state properties of the same name, but contain only tasks claimed by that worker.
+
+For example a metric function to count idleWorkers might be defined as
+```javascript
+const idleWorkers = state => {
+  let count = 0;
+  for (let {runningTasks} of state.runningWorkers.values()) {
+    if (runningTasks.size === 0) {
+      count++;
+    }
+  }
+  return count;
+};
+```
+
+There's one more level of complexity before completely rolling your own analysis: updating state on each event.
+If `updateState` is passed to `calculateMetrics`, it is called for each event and can update the state as it sees fit.
+It is called after the built-in state is updated.
+The `initialState` parameter is used to initialize the state.
+This function *must not* update any of the predefined state properties.
+
+For example, it might be useful to track workers that have started but never claimed a task:
+```javascript
+ds.calculateMetrics({
+  ...,
+  initialState: {overProvisionedWorkers: new Map()},
+  updateState: (state, [time, name, ...rest]) => {
+    switch (name) {
+      case 'worker-started': {
+        const [workerId] = rest;
+        const worker = state.runningWorkers.get(workerId);
+        state.overProvisionedWorkers.set(workerId, worker);
+        break;
+      }
+
+      case 'task-started': {
+        const [_, workerId] = rest;
+        state.overProvisionedWorkers.delete(workerId);
+        break;
+      }
+    }
+  },
+});
+```
 
 ## Usage
 
@@ -123,3 +247,4 @@ yarn sim $SIMULATION
 the available simulations are defined in `.js` files in `sims`.
 
 Add `-q` to quiet down the logging.
+Add `-o <output>` to output the simulation data to `<output>`.
