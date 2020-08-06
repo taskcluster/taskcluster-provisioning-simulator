@@ -10,8 +10,8 @@ const {Component} = require('./component');
  * - 'shutdown' -- when they shut down due to being idle
  */
 class Worker extends Component {
-  constructor({core, queue, startupDelay, idleTimeout, capacity = 1, utility = 1}) {
-    super({core, name: `w-${crypto.randomBytes(8).toString('hex')}`});
+  constructor({core, queue, name, startupDelay, idleTimeout, capacity = 1, utility = 1}) {
+    super({core, name: name || `w-${crypto.randomBytes(8).toString('hex')}`});
     this.queue = queue;
     this.startupDelay = startupDelay;
     this.idleTimeout = idleTimeout;
@@ -26,7 +26,7 @@ class Worker extends Component {
 
     this.idleTimeout = idleTimeout;
     this.idleTimeoutId = null;
-    this.idleSince = null;
+    this.idleSince = core.now();
 
     this.loop = this.loop.bind(this, this.loop);
     this.core.setTimeout(() => this.start(), startupDelay);
@@ -34,7 +34,7 @@ class Worker extends Component {
 
   start() {
     this.emit('started');
-    this.queue.on('started', this.loop);
+    this.queue.on('created', () => this.core.nextTick(this.loop));
     this.core.nextTick(this.loop);
   }
 
@@ -51,7 +51,7 @@ class Worker extends Component {
       return;
     }
 
-    if (this.idleSince && this.core.now() - this.idleSince >= this.idleTimeout) {
+    if (this.core.now() - this.idleSince >= this.idleTimeout) {
       this.shutdown();
       return;
     }

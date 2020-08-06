@@ -94,8 +94,14 @@ class Core {
    */
   run(runFor) {
     const stopAt = this._now + runFor;
-    while (this._now < stopAt && this.queue.size() > 0) {
+    while (this.queue.size() > 0) {
       const [when, what] = this.queue.deq();
+      if (when > stopAt) {
+        // for efficiency, restore this only in the unusual case, rather than
+        // peeking and then deq'ing in the common case
+        this.queue.enq([when, what]);
+        break;
+      }
       this._now = when;
       what();
     }
