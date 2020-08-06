@@ -10,10 +10,11 @@ const {Component} = require('./component');
  * - 'shutdown' -- when they shut down due to being idle
  */
 class Worker extends Component {
-  constructor({core, queue, name, startupDelay, idleTimeout, capacity = 1, utility = 1}) {
+  constructor({core, queue, name, startupDelay, interTaskDelay = 0, idleTimeout, capacity = 1, utility = 1}) {
     super({core, name: name || `w-${crypto.randomBytes(8).toString('hex')}`});
     this.queue = queue;
     this.startupDelay = startupDelay;
+    this.interTaskDelay = interTaskDelay;
     this.idleTimeout = idleTimeout;
     this.capacity = capacity;
     this.utility = utility;
@@ -80,9 +81,12 @@ class Worker extends Component {
 
     this.log(`finished ${task.taskId}`);
     this.queue.resolveTask(task.taskId);
-    this.runningTask = null;
-    this.idleSince = this.core.now();
-    this.core.nextTick(this.loop);
+    // wait for `interTaskDelay` to actually consider this worker idle..
+    this.core.setTimeout(() => {
+      this.runningTask = null;
+      this.idleSince = this.core.now();
+      this.core.nextTick(this.loop);
+    }, this.interTaskDelay);
   }
 
   startIdleTimeout() {

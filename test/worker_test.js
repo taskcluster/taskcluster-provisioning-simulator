@@ -115,4 +115,27 @@ suite('Worker', function() {
       [ 50, 'claimWork', 'wkr' ],
     ]);
   });
+
+  test('claim a pending task after finishing a task, with interTaskDelay', function() {
+    at(0, () => makeWorker({interTaskDelay: 30}));
+    at(10, () => queue.createTask('t1', {duration: 20}));
+    at(15, () => queue.createTask('t2', {duration: 20}));
+
+    core.run(400);
+
+    assertEvents([
+      [ 0, 'worker-requested', 'wkr' ],
+      [ 0, 'worker-started', 'wkr' ],
+      [ 0, 'claimWork', 'wkr' ],
+      [ 10, 'claimWork', 'wkr' ],
+      [ 10, 'task-started', 't1', 'wkr' ],
+      [ 30, 'task-resolved', 't1' ],
+      // inter-task..
+      [ 60, 'claimWork', 'wkr' ],
+      [ 60, 'task-started', 't2', 'wkr' ],
+      [ 80, 'task-resolved', 't2' ],
+      // inter-task..
+      [ 110, 'claimWork', 'wkr' ],
+    ]);
+  });
 });
