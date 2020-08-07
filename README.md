@@ -118,7 +118,10 @@ The worker constructor takes the following options:
 
 * `core`, `queue`
 * `startupDelay` -- time, in ms, between creation of the worker and the first call to `queue.claimWork`
+* `interTaskDelay` -- time, in ms, after a task during which the worker is unavailable for a new task (idle timeout starts after the delay is complete)
 * `idleTimeout` -- maximum time the worker will remain idle
+* `capacity` -- number of tasks this worker can execute in parallel (must be 1 right now)
+* `utility` -- speedup factor of this worker (the worker's time to complete a task is duration ÷ utility) (must be 1 right now)
 
 A worker has a `name` property giving a unique name for the worker.
 

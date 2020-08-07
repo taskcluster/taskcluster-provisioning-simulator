@@ -11,6 +11,7 @@ const assert = require('assert');
  *
  * This emits:
  *   'created', taskId -- when a task becomes pending
+ *   'claimWork', workerId -- when a worker calls claimWork (whether it gets work or not)
  *   'started', taskId, workerId -- when a task is claimed
  *   'resolved', taskId -- when a task is resolved
  */
@@ -36,6 +37,7 @@ class Queue extends Component {
    * 'created' event from this object and try again.
    */
   claimWork(workerId) {
+    this.emit('claimWork', workerId);
     if (this._pendingTasks.length > 0) {
       const task = this._pendingTasks.shift();
       this.emit('started', task.taskId, workerId);
