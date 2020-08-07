@@ -8,15 +8,21 @@ class Core {
       this.log = () => {};
     }
 
+    // A priority queue of [when, what], sorted by when.  The when is the time
+    // an event should happen, while the what is a function to call at that
+    // time.  "Time" is entirely simulated here, without reference to the JS
+    // engine's notions of time.
+    this.pqueue = new PriorityQueue((a, b) => (b[0] > a[0] ? 1 : b[0] < a[0] ? -1 : 0));
+
+    // The time is now January 1, 1970.
     this._now = 0;
-    this.queue = new PriorityQueue((a, b) => (b[0] > a[0] ? 1 : b[0] < a[0] ? -1 : 0));
   }
 
   /**
    * Run `cb` on the next run of the event loop.
    */
   nextTick(cb) {
-    this.queue.enq([this._now, cb]);
+    this.pqueue.enq([this._now, cb]);
   }
 
   /**
@@ -24,7 +30,7 @@ class Core {
    */
   setTimeout(cb, after) {
     const thunk = {cancelled: false};
-    this.queue.enq([this._now + after, () => thunk.cancelled || cb()]);
+    this.pqueue.enq([this._now + after, () => thunk.cancelled || cb()]);
     return thunk;
   }
 
@@ -50,7 +56,7 @@ class Core {
       cb();
     };
     const schedule = () => {
-      this.queue.enq([this._now + interval, run]);
+      this.pqueue.enq([this._now + interval, run]);
     };
     schedule();
     return thunk;
@@ -94,15 +100,18 @@ class Core {
    */
   run(runFor) {
     const stopAt = this._now + runFor;
-    while (this.queue.size() > 0) {
-      const [when, what] = this.queue.deq();
+    while (this.pqueue.size() > 0) {
+      // pop the next item from the priority queue
+      const [when, what] = this.pqueue.deq();
       if (when > stopAt) {
-        // for efficiency, restore this only in the unusual case, rather than
-        // peeking and then deq'ing in the common case
-        this.queue.enq([when, what]);
+        // for efficiency, restore this only in the unusual case where we need
+        // to stop, rather than peeking and then deq'ing in the common case
+        this.pqueue.enq([when, what]);
         break;
       }
+      // update the current time to when this event occurs
       this._now = when;
+      // ..and run the event
       what();
     }
   }
