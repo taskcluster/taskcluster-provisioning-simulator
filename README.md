@@ -248,3 +248,22 @@ the available simulations are defined in `.js` files in `sims`.
 
 Add `-q` to quiet down the logging.
 Add `-o <output>` to output the simulation data to `<output>`.
+
+## UI
+
+To visualize the output of a simulation:
+
+in one terminal:
+
+```
+yarn sim $SIMULATION -o datastore.json
+```
+
+then, in a new terminal, run
+
+```
+yarn start
+```
+
+and navigate to `http://localhost:5000/`. The page will automatically reload if `datastore.json` is modified, such as
+if you run a new simulation.

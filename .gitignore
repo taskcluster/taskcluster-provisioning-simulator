@@ -3,3 +3,5 @@ node_modules/
 build
 # IDE auto generated file
 .idea
+
+datastore.json
