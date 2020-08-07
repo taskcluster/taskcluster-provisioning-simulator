@@ -251,13 +251,19 @@ Add `-o <output>` to output the simulation data to `<output>`.
 
 ## UI
 
-A web interface can be used to visualize the output of a simulation.
+To visualize the output of a simulation:
 
-### Requirements
+in one terminal:
 
-The UI presently expects the output of the simulation to be stored in a file named `datastore.json` in the root
-repository.
+```
+yarn sim $SIMULATION -o datastore.json
+```
 
-### Development
+then, in a new terminal, run
 
-Run `yarn start`.
+```
+yarn start
+```
+
+and navigate to `http://localhost:5000/`. The page will automatically reload if `datastore.json` is modified, such as
+if you run a new simulation.
