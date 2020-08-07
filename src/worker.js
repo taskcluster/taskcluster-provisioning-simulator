@@ -29,10 +29,13 @@ class Worker extends Component {
 
     this.loop = this.loop.bind(this, this.loop);
     this.core.setTimeout(() => this.start(), startupDelay);
+
+    this.log('requested');
   }
 
   start() {
     this.emit('started');
+    this.log('started');
     this.idleSince = this.core.now();
     this.queue.on('created', () => this.core.nextTick(this.loop));
     this.core.nextTick(this.loop);
@@ -111,9 +114,9 @@ class Worker extends Component {
   }
 
   shutdown() {
-    this.log('shutting down');
     this.workerRunning = false;
     this.queue.removeListener('started', this.loop);
+    this.log('shutdown');
     this.emit('shutdown');
   }
 }
