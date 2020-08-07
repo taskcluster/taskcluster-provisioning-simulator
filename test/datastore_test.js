@@ -10,7 +10,7 @@ suite('DataStore', function() {
       // wkr1 / t1 are completed before t=500
       // wkr2 / t2 are running at simulation start
       //        t3 is pending at simulation start
-      // wkr3      is starting at simulation start
+      // wkr2      is starting at simulation start
       //        t4 is entirely within the simulation
       // wkr5 / t5 is running when the simulation stops
       //        t6 is pending when simulation stops
@@ -44,11 +44,11 @@ suite('DataStore', function() {
       [630, 'task-started', 't5', 'wkr5'],
       [640, 'task-created', 't6'],
       // simulation ends
-      [810, 'worker-shutdown', 'wkr5'],
-      [820, 'task-resolved', 't5'],
-      [840, 'task-resolved', 't6'],
-      [850, 'worker-started', 'wkr6'],
-      [830, 'task-started', 't6', 'wkr5'],
+      [810, 'task-resolved', 't5'],
+      [829, 'worker-shutdown', 'wkr5'],
+      [840, 'worker-started', 'wkr6'],
+      [850, 'task-started', 't6', 'wkr6'],
+      [860, 'task-resolved', 't6'],
       [860, 'worker-requested', 'wkr7', {capacity: 1, utility: 1}],
       [870, 'task-created', 't7'],
       [880, 'task-started', 't7', 'wkr7'],
@@ -85,11 +85,11 @@ suite('DataStore', function() {
       [130, 'task-started', 't5', 'wkr5'],
       [140, 'task-created', 't6'],
       // simulation ends
-      [310, 'worker-shutdown', 'wkr5'],
-      [320, 'task-resolved', 't5'],
-      [340, 'task-resolved', 't6'],
-      [350, 'worker-started', 'wkr6'],
-      [330, 'task-started', 't6', 'wkr5'],
+      [310, 'task-resolved', 't5'],
+      [329, 'worker-shutdown', 'wkr5'],
+      [340, 'worker-started', 'wkr6'],
+      [350, 'task-started', 't6', 'wkr6'],
+      [360, 'task-resolved', 't6'],
       [390, 'worker-shutdown', 'wkr6'],
     ]);
   });
@@ -110,14 +110,14 @@ suite('DataStore', function() {
     assert.deepEqual(ds.events, ds2.events);
   });
 
-  suite('calculateMetrics', function() {
+  suite('analyze', function() {
     let ds;
     suiteSetup(function() {
       ds = DataStore.fromRecorder(recorder);
     });
 
     test('custom metric at 100ms', function() {
-      const metrics = ds.calculateMetrics({
+      const {metrics} = ds.analyze({
         interval: 100,
         metrics: {
           totalCapacity(state) {
@@ -145,7 +145,7 @@ suite('DataStore', function() {
     });
 
     test('pendingTasks at 100ms', function() {
-      const metrics = ds.calculateMetrics({interval: 100, metrics: {pendingTasks: DataStore.pendingTasks}});
+      const {metrics} = ds.analyze({interval: 100, metrics: {pendingTasks: DataStore.pendingTasks}});
       assert.deepEqual(metrics, [
         {time: 0, pendingTasks: 1},
         {time: 100, pendingTasks: 0},
@@ -155,7 +155,7 @@ suite('DataStore', function() {
     });
 
     test('pendingTasks at 50ms', function() {
-      const metrics = ds.calculateMetrics({interval: 50, metrics: {pendingTasks: DataStore.pendingTasks}});
+      const {metrics} = ds.analyze({interval: 50, metrics: {pendingTasks: DataStore.pendingTasks}});
       assert.deepEqual(metrics, [
         {time: 0, pendingTasks: 1},
         {time: 50, pendingTasks: 0},
@@ -168,7 +168,7 @@ suite('DataStore', function() {
     });
 
     test('resolvedTasks at 100ms', function() {
-      const metrics = ds.calculateMetrics({interval: 100, metrics: {resolvedTasks: DataStore.resolvedTasks}});
+      const {metrics} = ds.analyze({interval: 100, metrics: {resolvedTasks: DataStore.resolvedTasks}});
       assert.deepEqual(metrics, [
         { time: 0, resolvedTasks: 0 },
         { time: 100, resolvedTasks: 2 },
@@ -178,7 +178,7 @@ suite('DataStore', function() {
     });
 
     test('runningTasks at 100ms', function() {
-      const metrics = ds.calculateMetrics({interval: 100, metrics: {runningTasks: DataStore.runningTasks}});
+      const {metrics} = ds.analyze({interval: 100, metrics: {runningTasks: DataStore.runningTasks}});
       assert.deepEqual(metrics, [
         {time: 0, runningTasks: 1},
         {time: 100, runningTasks: 1},
@@ -188,7 +188,7 @@ suite('DataStore', function() {
     });
 
     test('requestedWorkers at 25ms', function() {
-      const metrics = ds.calculateMetrics({interval: 25, metrics: {requestedWorkers: DataStore.requestedWorkers}});
+      const {metrics} = ds.analyze({interval: 25, metrics: {requestedWorkers: DataStore.requestedWorkers}});
       assert.deepEqual(metrics, [
         { time: 0, requestedWorkers: 1 },
         { time: 25, requestedWorkers: 0 },
@@ -207,7 +207,7 @@ suite('DataStore', function() {
     });
 
     test('runningWorkers at 100ms', function() {
-      const metrics = ds.calculateMetrics({interval: 100, metrics: {runningWorkers: DataStore.runningWorkers}});
+      const {metrics} = ds.analyze({interval: 100, metrics: {runningWorkers: DataStore.runningWorkers}});
       assert.deepEqual(metrics, [
         { time: 0, runningWorkers: 1 },
         { time: 100, runningWorkers: 2 },
@@ -217,7 +217,7 @@ suite('DataStore', function() {
     });
 
     test('shutdownWorkers at 100ms', function() {
-      const metrics = ds.calculateMetrics({interval: 100, metrics: {shutdownWorkers: DataStore.shutdownWorkers}});
+      const {metrics} = ds.analyze({interval: 100, metrics: {shutdownWorkers: DataStore.shutdownWorkers}});
       assert.deepEqual(metrics, [
         { time: 0, shutdownWorkers: 0 },
         { time: 100, shutdownWorkers: 1 },
@@ -227,7 +227,7 @@ suite('DataStore', function() {
     });
 
     test('custom state function at 10ms', function() {
-      const metrics = ds.calculateMetrics({
+      const {metrics} = ds.analyze({
         interval: 10,
         metrics: {
           overProvisionedWorkers(state) {

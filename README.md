@@ -146,12 +146,17 @@ The events from the ramp-up period will have negative timestamps, and events fro
 The DataStore for a simulation run is available from the simulator's `sim.dataStore()` method.
 DataStores can be serialized by JSON-encoding the result of `ds.asSeriazliable()`, and re-created with `DataStore.fromSerializable(serializable)`.
 
-### CalculateMetrics
+### Analysis
 
-While it's perfectly OK to analyze the event stream directly, in many cases the interesting information takes the form of analyses of the state at regular intervals, such as every minute.
-The `ds.calculateMetrics({interval, metrics: { ... }, updateState})` method automates this analysis for you.
+While it's perfectly OK to analyze the event stream directly, in many cases the interesting information takes the form of analyses of the state of the system as it evolves.
+The `ds.analyze({interval, metrics: { ... }, updateState})` method automates this analysis for you.
+It calculates "metrics", which are samples of the system state at regular moments in time, as well as the final system state.
 The `interval` parameter gives the interval on which to measure, and the `metrics` parameter gives the metrics that should be calculated at each interval.
-The result is an array of objects of the form
+The result is `{metrics, state}`.
+
+#### Metrics
+
+The first is an array of objects of the form
 
 ```js
 [
@@ -174,7 +179,7 @@ There are a few static methods on the DataStore class to calculate some basic th
 A simple analysis might graph the following
 
 ```javascript
-ds.calculateMetrics({
+ds.analyze({
   interval: 30000, // 30 seconds
   metrics: {
     pendingTasks: DataStore.pendingTasks,
@@ -184,12 +189,7 @@ ds.calculateMetrics({
 });
 ```
 
-It's also possible to write your own metric functions, accepting a state object.
-The `calculateMetrics` method supplies the following state properties:
-
-* `pendingTasks`, `runningTasks`, and `resolvedTasks` -- each a map from taskId to `{createdTime, startedTime, resolvedTime, workerId}`, with properties available as apporpriate.
-* `requestedWorkers`, `runningWorkers`, and `shutdownWorkers` -- each a map from workerId to `{requestedTime, startedTime, shutdownTime, runningTasks, resolvedTasks}`.
-  The `runningTasks` and `resolvedTasks` properties of each worker are similar to the state properties of the same name, but contain only tasks claimed by that worker.
+It's also possible to write your own metric functions, accepting a state object, as described below.
 
 For example a metric function to count idleWorkers might be defined as
 ```javascript
@@ -204,15 +204,23 @@ const idleWorkers = state => {
 };
 ```
 
+#### State
+
+The `analyze` method handles the following state properties:
+
+* `pendingTasks`, `runningTasks`, and `resolvedTasks` -- each a map from taskId to `{createdTime, startedTime, resolvedTime, workerId}`, with properties available as apporpriate.
+* `requestedWorkers`, `runningWorkers`, and `shutdownWorkers` -- each a map from workerId to `{requestedTime, startedTime, shutdownTime, runningTasks, resolvedTasks}`.
+  The `runningTasks` and `resolvedTasks` properties of each worker are similar to the state properties of the same name, but contain only tasks claimed by that worker.
+
 There's one more level of complexity before completely rolling your own analysis: updating state on each event.
-If `updateState` is passed to `calculateMetrics`, it is called for each event and can update the state as it sees fit.
+If `updateState` is passed to `analyze`, it is called for each event and can update the state as it sees fit.
 It is called after the built-in state is updated.
 The `initialState` parameter is used to initialize the state.
 This function *must not* update any of the predefined state properties.
 
 For example, it might be useful to track workers that have started but never claimed a task:
 ```javascript
-ds.calculateMetrics({
+ds.analyze({
   ...,
   initialState: {overProvisionedWorkers: new Map()},
   updateState: (state, [time, name, ...rest]) => {
