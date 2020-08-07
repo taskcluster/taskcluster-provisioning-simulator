@@ -40,33 +40,55 @@ class Analysis {
     return state;
   }
 
-  get overProvisionedWorkers() {
+  get _overProvisioning() {
     const {finalState} = this;
     return React.useMemo(
       () => {
         let count = 0;
+        let time = 0;
         
         // we only need to look at workers that have shut down, as running
         // workers may still yet take a task; and only look at resolved tasks
         // as a task cannot be running on a shut-down worker.
-        for (let {resolvedTasks} of finalState.shutdownWorkers.values()) {
+        for (let {startedTime, shutdownTime, resolvedTasks} of finalState.shutdownWorkers.values()) {
           console.log(resolvedTasks.size);
           if (resolvedTasks.size === 0) {
             count++;
+            time += shutdownTime - startedTime;
           }
         }
 
-        return count;
+        return {count, time};
       },
       [finalState]);
+  }
+
+  get overProvisionedWorkers() {
+    const {_overProvisioning: overProvisioning} = this;
+    return overProvisioning.count;
+  }
+
+  get overProvisionedTime() {
+    const {_overProvisioning: overProvisioning} = this;
+    return overProvisioning.time;
   }
 
   /**
    * Collect all of the summary statistics, in the form {title, description, value}
    */
   get summaryStatistics() {
-    const {datastore, overProvisionedWorkers} = this;
+    const {datastore, overProvisionedWorkers, overProvisionedTime} = this;
     const statistics = [];
+
+    const msToHuman = value => {
+      if (value === 0) {
+        return 'none';
+      } else if (value < 2000) {
+        return `${value} ms`;
+      } else {
+        return `${value} ms (${moment.duration(value).humanize({minutes: 120, hours: 48})})`;
+      }
+    }
 
     statistics.push({
       title: 'Number of Events',
@@ -79,7 +101,7 @@ class Analysis {
       title: 'Simulation Duration',
       description: 'Total duration of the simulation phase.',
       value: datastore.duration,
-      display: value => moment.duration(value).humanize({minutes: 120, hours: 48}),
+      display: msToHuman,
     });
 
     statistics.push({
@@ -87,6 +109,13 @@ class Analysis {
       description: 'Number of workers that started up, did no work, and shut down again.',
       value: overProvisionedWorkers,
       display: value => `${value} workers`,
+    });
+
+    statistics.push({
+      title: 'Overprovisioned Worker Time',
+      description: 'Total time overprovisioned workers (those which did no work) ran.',
+      value: overProvisionedTime,
+      display: msToHuman,
     });
 
     return statistics;
