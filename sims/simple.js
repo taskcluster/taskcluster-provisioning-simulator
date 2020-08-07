@@ -4,11 +4,11 @@ const {TickTockLoadGenerator} = require('./loadgen/ticktock');
 const {SimpleEstimateProvisioner} = require('./prov/simple');
 
 class SimpleSimulator extends Simulator {
-  constructor(options) {
+  constructor({commandOptions, ...options}) {
     super(options);
 
     this.rampUpTime = 10000;
-    this.runTime = 10000;
+    this.runTime = commandOptions.duration ? parseInt(commandOptions.duration, 10) : 10000;
     this.rampDownTime = 20000;
   }
 
@@ -35,6 +35,16 @@ class SimpleSimulator extends Simulator {
       }),
     });
   }
-};
+}
 
-module.exports = SimpleSimulator;
+module.exports = {
+  setup(command) {
+    command
+      .description('simple simulation with tasks injected regularly and a "simple estimate" provisioner')
+      .option(
+        '-d, --duration <ms>',
+        'duration (in ms) to run the simulation (excluding ramp up/down)',
+      );
+  },
+  Simulator: SimpleSimulator,
+};
