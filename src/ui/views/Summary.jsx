@@ -9,10 +9,10 @@ const statistics = [];
 const Summary = () => {
   return (
     <>{
-      analysis.summaryStatistics.map(({title, value}) => {
+      analysis.summaryStatistics.map(({title, value, display}) => {
         return (
           <div key={title}>
-            <em>{title}:</em>{' '}{value}
+            <em>{title}:</em>{' '}{display(value)}
           </div>
         );
       })

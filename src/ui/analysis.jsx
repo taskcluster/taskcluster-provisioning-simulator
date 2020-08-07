@@ -1,4 +1,5 @@
 import React from 'react';
+import moment from 'moment';
 import DataStoreContext from './datastore';
 
 /**
@@ -71,18 +72,21 @@ class Analysis {
       title: 'Number of Events',
       description: 'Total number of simulation events during the simulation phase, including contextual events.',
       value: datastore.events.length,
+      display: value => `${value}`,
     });
 
     statistics.push({
       title: 'Simulation Duration',
       description: 'Total duration of the simulation phase.',
-      value: `${datastore.duration}ms`,
+      value: datastore.duration,
+      display: value => moment.duration(value).humanize({minutes: 120, hours: 48}),
     });
 
     statistics.push({
       title: 'Overprovisioned Workers',
       description: 'Number of workers that started up, did no work, and shut down again.',
-      value: `${overProvisionedWorkers} workers`,
+      value: overProvisionedWorkers,
+      display: value => `${value} workers`,
     });
 
     return statistics;
