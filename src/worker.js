@@ -26,7 +26,6 @@ class Worker extends Component {
 
     this.idleTimeout = idleTimeout;
     this.idleTimeoutId = null;
-    this.idleSince = core.now();
 
     this.loop = this.loop.bind(this, this.loop);
     this.core.setTimeout(() => this.start(), startupDelay);
@@ -34,6 +33,7 @@ class Worker extends Component {
 
   start() {
     this.emit('started');
+    this.idleSince = this.core.now();
     this.queue.on('created', () => this.core.nextTick(this.loop));
     this.core.nextTick(this.loop);
   }
