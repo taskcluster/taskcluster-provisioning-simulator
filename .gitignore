@@ -1,1 +1,5 @@
 node_modules/
+# Neutrino build directory
+build
+# IDE auto generated file
+.idea
