@@ -1,20 +1,31 @@
 import { hot } from 'react-hot-loader';
+import {
+  HashRouter as Router,
+  Switch,
+  Route,
+  Link
+} from "react-router-dom";
 import React from 'react';
 import './App.css';
-import datastoreJson from '../../datastore';
-import { DataStore } from '../';
+import Home from './views/Home';
+import Summary from './views/Summary';
+import DataStoreContext from './datastore';
 
-const datastore = DataStore.fromSerializable(datastoreJson);
-
-const message = 'Welcome to Provisioning Simulator';
 const App = () => {
   return (
+    <Router>
       <div className="App">
-          <h1>{message}</h1>
-          Events: {datastore.events.length}
-          <br />
-          Duration: {datastore.duration}
+        <h1>Provisioning Simulation Visualizer</h1>
+        <Switch>
+          <Route path="/summary">
+            <Summary />
+          </Route>
+          <Route path="/">
+            <Home />
+          </Route>
+        </Switch>
       </div>
+    </Router>
   );
 };
 
