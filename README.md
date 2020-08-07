@@ -248,3 +248,16 @@ the available simulations are defined in `.js` files in `sims`.
 
 Add `-q` to quiet down the logging.
 Add `-o <output>` to output the simulation data to `<output>`.
+
+## UI
+
+A web interface can be used to visualize the output of a simulation.
+
+### Requirements
+
+The UI presently expects the output of the simulation to be stored in a file named `datastore.json` in the root
+repository.
+
+### Development
+
+Run `yarn start`.
