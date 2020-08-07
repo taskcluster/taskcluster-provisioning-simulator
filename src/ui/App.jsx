@@ -1,7 +1,10 @@
 import { hot } from 'react-hot-loader';
 import React from 'react';
 import './App.css';
-import datastore from '../../datastore';
+import datastoreJson from '../../datastore';
+import { DataStore } from '../';
+
+const datastore = DataStore.fromSerializable(datastoreJson);
 
 const message = 'Welcome to Provisioning Simulator';
 const App = () => {

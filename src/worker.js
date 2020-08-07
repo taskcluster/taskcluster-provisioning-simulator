@@ -1,6 +1,7 @@
 const assert = require('assert');
-const crypto = require('crypto');
 const {Component} = require('./component');
+
+let NEXT_WORKER = 10000;
 
 /**
  * A worker claims work.  Workers have `.name`, the worker name.
@@ -11,7 +12,7 @@ const {Component} = require('./component');
  */
 class Worker extends Component {
   constructor({core, queue, name, startupDelay, interTaskDelay = 0, idleTimeout, capacity = 1, utility = 1}) {
-    super({core, name: name || `w-${crypto.randomBytes(8).toString('hex')}`});
+    super({core, name: name || `w-${NEXT_WORKER++}`});
     this.queue = queue;
     this.startupDelay = startupDelay;
     this.interTaskDelay = interTaskDelay;
