@@ -247,10 +247,11 @@ To run a simulation, use
 yarn sim $SIMULATION
 ```
 
-the available simulations are defined in `.js` files in `sims`.
+the simulations are defined in `.js` files in `sims`.
+Run `yarn sim --help` to see them.
 
 Add `-q` to quiet down the logging.
-Add `-o <output>` to output the simulation data to `<output>`.
+Add `-o <output>` to output the simulation datastore to `<output>` (defaulting to `datastore.json`).
 
 ## UI
 
