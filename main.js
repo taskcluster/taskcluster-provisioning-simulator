@@ -20,7 +20,7 @@ fs.readdirSync(`${__dirname}/sims`).forEach(file => {
 
       const simulator = new Simulator({
         logging: !simOptions.quiet,
-        commandArgs: args.slice(0, args.length - 2),
+        commandArgs: args.slice(0, args.length - 1),
         commandOptions: subcommand.opts(),
       });
 
