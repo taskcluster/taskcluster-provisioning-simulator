@@ -27,6 +27,7 @@
   },
   "devDependencies": {
     "@neutrinojs/react": "^9.3.0",
+    "amqplib": "^0.6.0",
     "debug": "^4.1.1",
     "mocha": "^8.1.0",
     "mock-fs": "^4.12.0",

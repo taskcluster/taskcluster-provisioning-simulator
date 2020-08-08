@@ -10,17 +10,17 @@ class Simulator {
 
     this.core = core;
     this.queue = queue;
-
-    this.loadGenerator = this.loadGeneratorFactory();
-    this.provisioner = this.provisionerFactory();
-
-    this.recorder = new Recorder(this);
   }
 
   run() {
     assert.notEqual(this.rampUpTime, undefined);
     assert.notEqual(this.runTime, undefined);
     assert.notEqual(this.rampDownTime, undefined);
+
+    this.loadGenerator = this.loadGeneratorFactory();
+    this.provisioner = this.provisionerFactory();
+
+    this.recorder = new Recorder(this);
 
     this.core.log('ramping up');
     this.loadGenerator.start();
