@@ -42,16 +42,19 @@ const PointInTimeMetrics = () => {
 
             case 'worker-requested': {
                 state.requestedWorkers += 1;
+                break;
             }
 
             case 'worker-started': {
                 state.requestedWorkers -= 1;
                 state.runningWorkers += 1;
+                break;
             }
 
             case 'worker-shutdown': {
                 state.runningWorkers -= 1;
                 state.shutdownWorkers += 1;
+                break;
             }
         }
 
