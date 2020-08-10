@@ -1,5 +1,5 @@
 import React from 'react';
-import moment from 'moment';
+import formatDistance from 'date-fns/formatDistance';
 import DataStoreContext from './datastore';
 
 /**
@@ -86,7 +86,11 @@ class Analysis {
       } else if (value < 2000) {
         return `${value} ms`;
       } else {
-        return `${value} ms (${moment.duration(value).humanize({minutes: 120, hours: 48})})`;
+        const fmt = formatDistance(
+            new Date(0),
+            new Date(value),
+        );
+        return `${fmt} (${value} ms)`;
       }
     }
 
