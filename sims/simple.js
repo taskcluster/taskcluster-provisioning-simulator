@@ -27,6 +27,7 @@ class SimpleSimulator extends Simulator {
       queue: this.queue,
       minCapacity: 0,
       maxCapacity: 5,
+      scalingRatio: 1.0,
       workerFactory: () => new Worker({
         core: this.core,
         queue: this.queue,
