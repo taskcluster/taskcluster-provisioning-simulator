@@ -12,11 +12,12 @@ const {Provisioner} = require('../..');
  * - workerFactory -- a callable that will create a new worker
  */
 class SimpleEstimateProvisioner extends Provisioner {
-  constructor({core, queue, minCapacity, maxCapacity, workerFactory}) {
+  constructor({core, queue, minCapacity, maxCapacity, scalingRatio, workerFactory}) {
     super({core});
     this.queue = queue;
     this.minCapacity = minCapacity;
     this.maxCapacity = maxCapacity;
+    this.scalingRatio = scalingRatio;
     this.workerFactory = workerFactory;
 
     this.requestedWorkers = new Map();
@@ -28,7 +29,7 @@ class SimpleEstimateProvisioner extends Provisioner {
   }
 
   // taken directly from worker-manager, omitting logging and monitoring stuff
-  simple({minCapacity, maxCapacity, workerInfo}) {
+  simple({minCapacity, maxCapacity, scalingRatio, workerInfo}) {
     const pendingTasks = this.queue.pendingTasks();
     const {existingCapacity, requestedCapacity = 0} = workerInfo;
 
@@ -37,7 +38,7 @@ class SimpleEstimateProvisioner extends Provisioner {
     // decide how much more to request. In other words, we will ask to spawn
     // enough capacity to cover all pending tasks at any time unless it would
     // create more than maxCapacity instances
-    const desiredCapacity = Math.max(minCapacity, Math.min(pendingTasks + existingCapacity, maxCapacity));
+    const desiredCapacity = Math.max(minCapacity, Math.min(pendingTasks * scalingRatio + existingCapacity, maxCapacity));
 
     // Workers turn themselves off so we just return a positive number for
     // how many extra we want if we do want any
@@ -57,6 +58,7 @@ class SimpleEstimateProvisioner extends Provisioner {
     let toSpawn = this.simple({
       minCapacity: this.minCapacity,
       maxCapacity: this.maxCapacity,
+      scalingRatio: this.scalingRatio,
       workerInfo,
     });
 
