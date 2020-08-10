@@ -6,6 +6,7 @@ const Home = () => {
   return (
     <ul>
       <li><Link to="/summary">Summary Statistics</Link></li>
+      <li><Link to="/point-in-time-metrics">Point in Time Metrics</Link></li>
     </ul>
   );
 };
