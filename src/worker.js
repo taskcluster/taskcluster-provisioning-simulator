@@ -37,7 +37,6 @@ class Worker extends Component {
     this.emit('started');
     this.log('started');
     this.idleSince = this.core.now();
-    this.queue.on('created', () => this.core.nextTick(this.loop));
     this.core.nextTick(this.loop);
   }
 
@@ -71,6 +70,10 @@ class Worker extends Component {
       });
     } else if (!this.idleTimeoutId) {
       this.startIdleTimeout();
+    }
+
+    if (this.runningTasks.length !== this.capacity) {
+      this.queue.onPending(this.loop);
     }
   }
 
@@ -118,7 +121,6 @@ class Worker extends Component {
 
   shutdown() {
     this.workerRunning = false;
-    this.queue.removeListener('started', this.loop);
     this.log('shutdown');
     this.emit('shutdown');
   }

@@ -21,6 +21,7 @@ class Queue extends Component {
     this.setMaxListeners(100); // potentially lots of workers..
     this._pendingTasks = [];
     this._runningTasks = new Map();
+    this._pendingCallbacks = [];
   }
 
   /**
@@ -30,6 +31,14 @@ class Queue extends Component {
   createTask(taskId, payload) {
     this._pendingTasks.push({taskId, payload});
     this.emit('created', taskId);
+
+    // call pending callbacks trying to get this task claimed until there
+    // are no more pending callbacks or pending tasks.  This is more efficient
+    // than having workers listen to the `created` event, as EventEmitter always
+    // calls *all* listeners, even though only one will actually claim the task.
+    while (this._pendingCallbacks.length > 0 && this._pendingTasks.length > 0) {
+      this._pendingCallbacks.shift()();
+    }
   }
 
   /**
@@ -45,6 +54,15 @@ class Queue extends Component {
       this._runningTasks.set(task.taskId, task);
     });
     return tasks;
+  }
+
+  /**
+   * Schedule a callback to be made when there is work that can be
+   * claimed.  This will result in *one* call to the callback, after
+   * which another must be scheduled.
+   */
+  onPending(cb) {
+    this._pendingCallbacks.push(cb);
   }
 
   /**
