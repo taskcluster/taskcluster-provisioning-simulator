@@ -1,5 +1,4 @@
 const {Component} = require('./component');
-const assert = require('assert');
 
 /**
  * Simulator for the TC Queue.
@@ -84,8 +83,14 @@ class Queue extends Component {
    * Stop the queue, checking that all tasks are resolved
    */
   stop() {
-    assert.deepEqual([...this._pendingTasks.keys()], []);
-    assert.deepEqual([...this._runningTasks.keys()], []);
+    const pendingTasks = this._pendingTasks.length;
+    const runningTasks = this._runningTasks.size;
+    if (pendingTasks !== 0) {
+      this.log(`NOTE: ${pendingTasks} tasks still pending at end of ramp-down phase`);
+    }
+    if (runningTasks !== 0) {
+      this.log(`NOTE: ${runningTasks} tasks running at end of ramp-down phase`);
+    }
   }
 }
 

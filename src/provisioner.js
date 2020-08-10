@@ -1,4 +1,3 @@
-const assert = require('assert');
 const {Component} = require('./component');
 
 /**
@@ -33,8 +32,10 @@ class Provisioner extends Component {
 
   stop() {
     // check that all workers have stopped
-    const runningWorkers = [...this.workers.keys()];
-    assert.deepEqual(runningWorkers, []);
+    const runningWorkers = this.workers.size;
+    if (runningWorkers !== 0) {
+      this.log(`NOTE: ${runningWorkers} workers still running at end of ramp-down phase`);
+    }
   }
 }
 
