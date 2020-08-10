@@ -70,7 +70,7 @@ as well as some utility functions:
 The queue implements a subset of the Taskcluster queue's functionality.
 
 * `queue.createTask(taskId, payload)` - create a new task, with payload of the form `{duration}` giving the task duration in ms.
-* `queue.claimWork()` - return a pending task or nothing
+* `queue.claimWork(workerId, numTasks)` - return an array of pending tasks or nothing
 * `queue.resolveTask(taskId)` - mark a task as resolved
 * `queue.pendingTasks()` - return the number of pending tasks
 
@@ -120,7 +120,7 @@ The worker constructor takes the following options:
 * `startupDelay` -- time, in ms, between creation of the worker and the first call to `queue.claimWork`
 * `interTaskDelay` -- time, in ms, after a task during which the worker is unavailable for a new task (idle timeout starts after the delay is complete)
 * `idleTimeout` -- maximum time the worker will remain idle
-* `capacity` -- number of tasks this worker can execute in parallel (must be 1 right now)
+* `capacity` -- number of tasks this worker can execute in parallel
 * `utility` -- speedup factor of this worker (the worker's time to complete a task is duration ÷ utility) (must be 1 right now)
 
 A worker has a `name` property giving a unique name for the worker.

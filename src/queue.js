@@ -36,14 +36,15 @@ class Queue extends Component {
    * Return a pending task, or nothing.  If nothing, then wait for a
    * 'created' event from this object and try again.
    */
-  claimWork(workerId) {
+  claimWork(workerId, numTasks) {
     this.emit('claimWork', workerId);
-    if (this._pendingTasks.length > 0) {
-      const task = this._pendingTasks.shift();
+    // returns [] if numTasks > # of pending tasks
+    const tasks = this._pendingTasks.splice(0, numTasks);
+    tasks.forEach(task => {
       this.emit('started', task.taskId, workerId);
       this._runningTasks.set(task.taskId, task);
-      return task;
-    }
+    });
+    return tasks;
   }
 
   /**

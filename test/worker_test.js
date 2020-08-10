@@ -116,6 +116,55 @@ suite('Worker', function() {
     ]);
   });
 
+  test('claim multiple pending tasks as they appear', function() {
+    at(0, () => makeWorker({capacity: 2}));
+    at(10, () => queue.createTask('t1', {duration: 20}));
+    at(15, () => queue.createTask('t2', {duration: 20}));
+    at(20, () => queue.createTask('t3', {duration: 20}));
+
+    core.run(400);
+
+    assertEvents([
+      [ 0, 'worker-requested', 'wkr' ],
+      [ 0, 'worker-started', 'wkr' ],
+      [ 0, 'claimWork', 'wkr' ],
+      [ 10, 'claimWork', 'wkr' ],
+      [ 10, 'task-started', 't1', 'wkr' ],
+      [ 15, 'claimWork', 'wkr' ],
+      [ 15, 'task-started', 't2', 'wkr' ],
+      [ 30, 'task-resolved', 't1' ],
+      [ 30, 'claimWork', 'wkr' ],
+      [ 30, 'task-started', 't3', 'wkr' ],
+      [ 35, 'task-resolved', 't2' ],
+      [ 35, 'claimWork', 'wkr' ],
+      [ 50, 'task-resolved', 't3' ],
+      [ 50, 'claimWork', 'wkr' ],
+    ]);
+  });
+
+  test('claim multiple pending tasks at once', function() {
+    at(0, () => makeWorker({capacity: 2}));
+    at(10, () => queue.createTask('t1', {duration: 20}));
+    at(10, () => queue.createTask('t2', {duration: 20}));
+
+    core.run(400);
+
+    assertEvents([
+      [ 0, 'worker-requested', 'wkr' ],
+      [ 0, 'worker-started', 'wkr' ],
+      [ 0, 'claimWork', 'wkr' ],
+      [ 10, 'claimWork', 'wkr' ],
+      [ 10, 'task-started', 't1', 'wkr' ],
+      [ 10, 'task-started', 't2', 'wkr' ],
+      [ 30, 'task-resolved', 't1' ],
+      [ 30, 'task-resolved', 't2' ],
+      // workers call claimWork() after each task is resolved
+      // so there is an extra call here
+      [ 30, 'claimWork', 'wkr' ],
+      [ 30, 'claimWork', 'wkr' ],
+    ]);
+  });
+
   test('claim a pending task after finishing a task, with interTaskDelay', function() {
     at(0, () => makeWorker({interTaskDelay: 30}));
     at(10, () => queue.createTask('t1', {duration: 20}));

@@ -18,12 +18,11 @@ class Worker extends Component {
     this.idleTimeout = idleTimeout;
     this.capacity = capacity;
     this.utility = utility;
-    assert.equal(capacity, 1, 'wait for #3322');
     assert.equal(utility, 1, 'wait for #3322');
 
     this.workerRunning = true;
 
-    this.runningTask = null;
+    this.runningTasks = [];
 
     this.idleTimeout = idleTimeout;
     this.idleTimeoutId = null;
@@ -48,7 +47,7 @@ class Worker extends Component {
       return;
     }
 
-    if (this.runningTask) {
+    if (this.runningTasks.length === this.capacity) {
       return;
     }
 
@@ -57,12 +56,16 @@ class Worker extends Component {
       return;
     }
 
-    const task = this.queue.claimWork(this.name);
-    if (task) {
-      this.log(`claimed ${task.taskId}`);
-      this.runningTask = task;
-      this.stopIdleTimeout();
-      this.startTask(task);
+    // number of tasks to request from queue
+    const toClaim = Math.max(0, this.capacity - this.runningTasks.length);
+    const tasks = this.queue.claimWork(this.name, toClaim);
+    if (tasks.length > 0) {
+      tasks.forEach(task => {
+        this.log(`claimed ${task.taskId}`);
+        this.runningTasks.push(task);
+        this.stopIdleTimeout();
+        this.startTask(task);
+      });
     } else if (!this.idleTimeoutId) {
       this.startIdleTimeout();
     }
@@ -83,8 +86,16 @@ class Worker extends Component {
     this.queue.resolveTask(task.taskId);
     // wait for `interTaskDelay` to actually consider this worker idle..
     this.core.setTimeout(() => {
-      this.runningTask = null;
-      this.idleSince = this.core.now();
+      const idx = this.runningTasks.indexOf(task);
+      if (idx > -1) {
+        this.runningTasks.splice(idx, 1);
+      } else {
+        throw new Error(`worker ${this.name} could not resolve task ${task.taskId}`)
+      }
+      // go idle if this was the last running task
+      if (this.runningTasks.length === 0) {
+        this.idleSince = this.core.now();
+      }
       this.core.nextTick(this.loop);
     }, this.interTaskDelay);
   }
