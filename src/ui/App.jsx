@@ -1,6 +1,6 @@
 import { hot } from 'react-hot-loader';
 import {
-  HashRouter as Router,
+  BrowserRouter as Router,
   Switch,
   Route,
   Link
