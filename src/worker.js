@@ -87,11 +87,8 @@ class Worker extends Component {
     // wait for `interTaskDelay` to actually consider this worker idle..
     this.core.setTimeout(() => {
       const idx = this.runningTasks.indexOf(task);
-      if (idx > -1) {
-        this.runningTasks.splice(idx, 1);
-      } else {
-        throw new Error(`worker ${this.name} could not resolve task ${task.taskId}`);
-      }
+      assert(idx > -1, `worker ${this.name} could not resolve task ${task.taskId}`);
+      this.runningTasks.splice(idx, 1);
       // go idle if this was the last running task
       if (this.runningTasks.length === 0) {
         this.idleSince = this.core.now();
