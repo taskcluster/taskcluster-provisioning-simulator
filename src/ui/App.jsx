@@ -3,13 +3,11 @@ import {
   BrowserRouter as Router,
   Switch,
   Route,
-  Link
 } from "react-router-dom";
 import React from 'react';
 import './App.css';
 import Home from './views/Home';
 import Summary from './views/Summary';
-import DataStoreContext from './datastore';
 
 const App = () => {
   return (

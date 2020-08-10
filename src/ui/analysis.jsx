@@ -51,7 +51,6 @@ class Analysis {
         // workers may still yet take a task; and only look at resolved tasks
         // as a task cannot be running on a shut-down worker.
         for (let {startedTime, shutdownTime, resolvedTasks} of finalState.shutdownWorkers.values()) {
-          console.log(resolvedTasks.size);
           if (resolvedTasks.size === 0) {
             count++;
             time += shutdownTime - startedTime;
