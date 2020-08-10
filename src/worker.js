@@ -90,7 +90,7 @@ class Worker extends Component {
       if (idx > -1) {
         this.runningTasks.splice(idx, 1);
       } else {
-        throw new Error(`worker ${this.name} could not resolve task ${task.taskId}`)
+        throw new Error(`worker ${this.name} could not resolve task ${task.taskId}`);
       }
       // go idle if this was the last running task
       if (this.runningTasks.length === 0) {
