@@ -1,17 +1,29 @@
 import { hot } from 'react-hot-loader';
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route,
+} from "react-router-dom";
 import React from 'react';
 import './App.css';
-import datastore from '../../datastore';
+import Home from './views/Home';
+import Summary from './views/Summary';
 
-const message = 'Welcome to Provisioning Simulator';
 const App = () => {
   return (
+    <Router>
       <div className="App">
-          <h1>{message}</h1>
-          Events: {datastore.events.length}
-          <br />
-          Duration: {datastore.duration}
+        <h1>Provisioning Simulation Visualizer</h1>
+        <Switch>
+          <Route path="/summary">
+            <Summary />
+          </Route>
+          <Route path="/">
+            <Home />
+          </Route>
+        </Switch>
       </div>
+    </Router>
   );
 };
 

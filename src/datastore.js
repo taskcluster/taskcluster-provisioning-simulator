@@ -1,3 +1,5 @@
+const assert = require('assert');
+
 /**
  * A data store records the main part of a simulation run as a sequence of
  * events, including events from the ramp-up and ramp-down periods as context.
@@ -77,9 +79,8 @@ class DataStore {
   /**
    * Calculate metrics with the given interval
    */
-  calculateMetrics({interval, metrics, updateState, initialState}) {
-    const events = this.events;
-    const duration = this.duration;
+  analyze({interval, metrics, updateState, initialState}) {
+    const {duration, events} = this;
 
     // track the current state as we see events..
 
@@ -127,10 +128,12 @@ class DataStore {
           const [taskId, workerId] = rest;
 
           const task = move(taskId, pendingTasks, runningTasks);
+          assert(task, `task ${taskId} started, but it does not exist`);
           task.startedTime = time;
           task.workerId = workerId;
 
           const worker = runningWorkers.get(workerId);
+          assert(worker, `task ${taskId} started on non-running worker ${task.workerId}`);
           worker.runningTasks.set(taskId, task);
           break;
         }
@@ -138,9 +141,11 @@ class DataStore {
         case 'task-resolved': {
           const [taskId] = rest;
           const task = move(taskId, runningTasks, resolvedTasks);
+          assert(task, `task ${taskId} resolved, but it is not running`);
           task.resolvedTime = time;
 
           const worker = runningWorkers.get(task.workerId);
+          assert(worker, `task ${taskId} resolved on non-running worker ${task.workerId}`);
           move(taskId, worker.runningTasks, worker.resolvedTasks);
           break;
         }
@@ -160,6 +165,7 @@ class DataStore {
         case 'worker-started': {
           const [workerId] = rest;
           const worker = move(workerId, requestedWorkers, runningWorkers);
+          assert(worker, `worker ${workerId} started, but it was not requested`);
           worker.startedTime = time;
           break;
         }
@@ -167,6 +173,7 @@ class DataStore {
         case 'worker-shutdown': {
           const [workerId] = rest;
           const worker = move(workerId, runningWorkers, shutdownWorkers);
+          assert(worker, `worker ${workerId} shut down, but it was not started`);
           worker.shutdownTime = time;
           break;
         }
@@ -188,24 +195,36 @@ class DataStore {
 
     let nextTime = 0;
     let n = this.events.length;
+
     for (let i = 0; i < n; i++) {
       const event = events[i];
-      while (event[0] > nextTime) {
+      const when = event[0];
+
+      // sample metrics as many times as necessary to get to this timestamp..
+      while (when > nextTime) {
         generateMetrics(nextTime);
         nextTime += interval;
         if (nextTime > duration) {
-          return result;
+          // stop sampling after duration
+          nextTime = Infinity;
         }
       }
+
+      // stop processing events after duration
+      if (when > duration) {
+        break;
+      }
+
+      // update status with this event
       updateBuiltInState(event);
       updateState && updateState(state, event);
     }
 
-    return result;
+    return {metrics: result, state};
   }
 
   /**
-   * Utility metrics for calculateMetrics
+   * Utility metrics for analyze
    */
   static pendingTasks(state) {
     return state.pendingTasks.size;

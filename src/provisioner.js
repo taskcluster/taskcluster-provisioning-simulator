@@ -24,6 +24,7 @@ class Provisioner extends Component {
     this.emit('requested', name, {capacity, utility});
     worker.once('started', () => this.emit('started', name));
     worker.once('shutdown', () => {
+      this.emit('shutdown', name);
       this.workers.delete(name);
     });
   }
