@@ -3,7 +3,6 @@ import { hot } from 'react-hot-loader';
 import analysis from '../analysis';
 
 const Summary = () => {
-    console.log(analysis.datastore);
   return (
     <>
         <h1>Summary</h1>

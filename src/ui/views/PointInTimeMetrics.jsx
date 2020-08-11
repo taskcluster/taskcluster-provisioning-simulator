@@ -2,76 +2,33 @@ import React from 'react';
 import { hot } from 'react-hot-loader';
 import LinearGraph from '../Components/LinearGraph';
 import analysis from '../analysis';
+import { DataStore } from '../../datastore';
 
 const PointInTimeMetrics = () => {
-    const events = analysis.datastore.events;
-    const timeAnalysis = new Map();
-    const state = {
-        runningTasks: 0,
-        pendingTasks: 0,
-        resolvedTasks: 0,
-        runningWorkers: 0,
-        requestedWorkers: 0,
-        shutdownWorkers: 0,
-    };
+    const result = analysis.analyze({
+        interval: 1000,
+        metrics: {
+            pendingTasks: DataStore.pendingTasks,
+            runningTasks: DataStore.runningTasks,
+            resolvedTasks: DataStore.resolvedTasks,
+            requestedWorkers: DataStore.requestedWorkers,
+            runningWorkers: DataStore.runningWorkers,
+            shutdownWorkers: DataStore.shutdownWorkers,
+        },
+    });
     const datasetDefaults = {
         fill: false,
         pointRadius: 1,
     };
-
-    const updateState = (event) => {
-        const [eventTime, eventType] = event;
-
-        switch (eventType) {
-            case 'task-created': {
-                state.pendingTasks += 1;
-                break;
-            }
-
-            case 'task-started': {
-                state.runningTasks += 1;
-                state.pendingTasks -= 1;
-                break;
-            }
-
-            case 'task-resolved': {
-                state.runningTasks -= 1;
-                state.resolvedTasks += 1;
-                break;
-            }
-
-            case 'worker-requested': {
-                state.requestedWorkers += 1;
-                break;
-            }
-
-            case 'worker-started': {
-                state.requestedWorkers -= 1;
-                state.runningWorkers += 1;
-                break;
-            }
-
-            case 'worker-shutdown': {
-                state.runningWorkers -= 1;
-                state.shutdownWorkers += 1;
-                break;
-            }
-        }
-
-        timeAnalysis.set(eventTime, { ...state });
-    };
-
-    events.forEach(updateState);
-
     const tasks = {
-        labels: events.map(e => e[0]),
+        labels: result.metrics.map(m => m.time),
         datasets: [
             {
                 ...datasetDefaults,
                 label: 'Running Tasks',
                 backgroundColor: 'blue',
                 borderColor: 'blue',
-                data: [...timeAnalysis.values()].map(({ runningTasks }) => runningTasks),
+                data: result.metrics.map(({ runningTasks }) => runningTasks),
             },
             {
                 ...datasetDefaults,
@@ -79,7 +36,7 @@ const PointInTimeMetrics = () => {
                 backgroundColor: 'grey',
                 borderColor: 'grey',
                 fill: false,
-                data: [...timeAnalysis.values()].map(({ pendingTasks }) => pendingTasks),
+                data: result.metrics.map(({ pendingTasks }) => pendingTasks),
             },
             {
                 ...datasetDefaults,
@@ -87,19 +44,19 @@ const PointInTimeMetrics = () => {
                 backgroundColor: 'green',
                 borderColor: 'green',
                 fill: false,
-                data: [...timeAnalysis.values()].map(({ resolvedTasks }) => resolvedTasks),
+                data: result.metrics.map(({ resolvedTasks }) => resolvedTasks),
             },
         ]
     };
     const workers = {
-        labels: events.map(e => e[0]),
+        labels: result.metrics.map(m => m.time),
         datasets: [
             {
                 ...datasetDefaults,
                 label: 'Running Workers',
                 backgroundColor: 'blue',
                 borderColor: 'blue',
-                data: [...timeAnalysis.values()].map(({ runningWorkers }) => runningWorkers),
+                data: result.metrics.map(({ runningWorkers }) => runningWorkers),
             },
             {
                 ...datasetDefaults,
@@ -107,7 +64,7 @@ const PointInTimeMetrics = () => {
                 backgroundColor: 'grey',
                 borderColor: 'grey',
                 fill: false,
-                data: [...timeAnalysis.values()].map(({ requestedWorkers }) => requestedWorkers),
+                data: result.metrics.map(({ requestedWorkers }) => requestedWorkers),
             },
             {
                 ...datasetDefaults,
@@ -115,7 +72,7 @@ const PointInTimeMetrics = () => {
                 backgroundColor: 'green',
                 borderColor: 'green',
                 fill: false,
-                data: [...timeAnalysis.values()].map(({ shutdownWorkers }) => shutdownWorkers),
+                data: result.metrics.map(({ shutdownWorkers }) => shutdownWorkers),
             },
         ]
     };
