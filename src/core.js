@@ -1,3 +1,4 @@
+const assert = require('assert');
 const PriorityQueue = require('priorityqueuejs');
 const chalk = require('chalk');
 
@@ -18,11 +19,17 @@ class Core {
     this._now = 0;
   }
 
+  _enq(when, what) {
+    assert.equal(typeof when, 'number');
+    assert.equal(typeof what, 'function');
+    this.pqueue.enq([when, what]);
+  }
+
   /**
    * Run `cb` on the next run of the event loop.
    */
   nextTick(cb) {
-    this.pqueue.enq([this._now, cb]);
+    this._enq(this._now, cb);
   }
 
   /**
@@ -30,7 +37,7 @@ class Core {
    */
   setTimeout(cb, after) {
     const thunk = {cancelled: false};
-    this.pqueue.enq([this._now + after, () => thunk.cancelled || cb()]);
+    this._enq(this._now + after, () => thunk.cancelled || cb());
     return thunk;
   }
 
@@ -56,7 +63,7 @@ class Core {
       cb();
     };
     const schedule = () => {
-      this.pqueue.enq([this._now + interval, run]);
+      this._enq(this._now + interval, run);
     };
     schedule();
     return thunk;
@@ -106,7 +113,7 @@ class Core {
       if (when > stopAt) {
         // for efficiency, restore this only in the unusual case where we need
         // to stop, rather than peeking and then deq'ing in the common case
-        this.pqueue.enq([when, what]);
+        this._enq(when, what);
         break;
       }
       // update the current time to when this event occurs
