@@ -19,7 +19,6 @@ class Worker extends Component {
     this.idleTimeout = idleTimeout;
     this.capacity = capacity;
     this.utility = utility;
-    assert.equal(utility, 1, 'wait for #3322');
 
     this.workerRunning = true;
 
@@ -76,9 +75,12 @@ class Worker extends Component {
   }
 
   startTask(task) {
+    // duration scales inversely to utility -- a worker with utility = 2 will finish
+    // tasks twice as quickly as "normal"
+    const taskDuration = task.payload.duration / this.utility;
     this.core.setTimeout(() => {
       this.finishTask(task);
-    }, task.payload.duration);
+    }, taskDuration);
   }
 
   finishTask(task) {

@@ -116,6 +116,23 @@ suite('Worker', function() {
     ]);
   });
 
+  test('utility scales duration', function() {
+    at(0, () => makeWorker({utility: 2}));
+    at(10, () => queue.createTask('t1', {duration: 100}));
+
+    core.run(400);
+
+    assertEvents([
+      [ 0, 'worker-requested', 'wkr' ],
+      [ 0, 'worker-started', 'wkr' ],
+      [ 0, 'claimWork', 'wkr' ],
+      [ 10, 'claimWork', 'wkr' ],
+      [ 10, 'task-started', 't1', 'wkr' ],
+      [ 60, 'task-resolved', 't1' ],
+      [ 60, 'claimWork', 'wkr' ],
+    ]);
+  });
+
   test('claim multiple pending tasks as they appear', function() {
     at(0, () => makeWorker({capacity: 2}));
     at(10, () => queue.createTask('t1', {duration: 20}));
