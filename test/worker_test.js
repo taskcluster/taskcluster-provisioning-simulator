@@ -160,6 +160,31 @@ suite('Worker', function() {
   });
 
   test('claim multiple pending tasks at once', function() {
+    // use startupDelay to ensure the tasks exist before the worker
+    // starts polling for work; otherwise, it grabs each task as it
+    // is created
+    at(0, () => makeWorker({capacity: 2, startupDelay: 20}));
+    at(10, () => queue.createTask('t1', {duration: 20}));
+    at(10, () => queue.createTask('t2', {duration: 20}));
+
+    core.run(400);
+
+    assertEvents([
+      [ 0, 'worker-requested', 'wkr' ],
+      [ 20, 'worker-started', 'wkr' ],
+      [ 20, 'claimWork', 'wkr' ],
+      [ 20, 'task-started', 't1', 'wkr' ],
+      [ 20, 'task-started', 't2', 'wkr' ],
+      [ 40, 'task-resolved', 't1' ],
+      [ 40, 'task-resolved', 't2' ],
+      // workers call claimWork() after each task is resolved
+      // so there is an extra call here
+      [ 40, 'claimWork', 'wkr' ],
+      [ 40, 'claimWork', 'wkr' ],
+    ]);
+  });
+
+  test('claim multiple pending tasks at once', function() {
     at(0, () => makeWorker({capacity: 2}));
     at(10, () => queue.createTask('t1', {duration: 20}));
     at(10, () => queue.createTask('t2', {duration: 20}));
@@ -172,6 +197,7 @@ suite('Worker', function() {
       [ 0, 'claimWork', 'wkr' ],
       [ 10, 'claimWork', 'wkr' ],
       [ 10, 'task-started', 't1', 'wkr' ],
+      [ 10, 'claimWork', 'wkr' ],
       [ 10, 'task-started', 't2', 'wkr' ],
       [ 30, 'task-resolved', 't1' ],
       [ 30, 'task-resolved', 't2' ],
