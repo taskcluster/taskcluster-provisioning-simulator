@@ -1,3 +1,4 @@
+const chalk = require('chalk');
 const {Component} = require('./component');
 
 /**
@@ -86,10 +87,10 @@ class Queue extends Component {
     const pendingTasks = this._pendingTasks.length;
     const runningTasks = this._runningTasks.size;
     if (pendingTasks !== 0) {
-      this.log(`NOTE: ${pendingTasks} tasks still pending at end of ramp-down phase`);
+      this.log(chalk`{red WARNING:} ${pendingTasks} tasks still pending at end of ramp-down phase`);
     }
     if (runningTasks !== 0) {
-      this.log(`NOTE: ${runningTasks} tasks running at end of ramp-down phase`);
+      this.log(chalk`{red WARNING:} ${runningTasks} tasks running at end of ramp-down phase`);
     }
   }
 }

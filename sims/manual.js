@@ -57,7 +57,7 @@ module.exports = {
       )
       .requiredOption(
         '--workload <factor>',
-        'seconds per second of work to inject',
+        'quantity of work (task execution) to create as a ratio of total task duration to time',
         Number,
       );
   },
