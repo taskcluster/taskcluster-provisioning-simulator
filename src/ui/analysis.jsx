@@ -46,7 +46,7 @@ class Analysis {
       () => {
         let count = 0;
         let time = 0;
-        
+
         // we only need to look at workers that have shut down, as running
         // workers may still yet take a task; and only look at resolved tasks
         // as a task cannot be running on a shut-down worker.
@@ -72,11 +72,43 @@ class Analysis {
     return overProvisioning.time;
   }
 
+  get waitTimeStats() {
+    const {state} = this.analyze({interval: Infinity, metrics: {}});
+
+    const makeStats = sequence => {
+      sequence.sort((a, b) => a - b);
+      const min = sequence[0];
+      const max = sequence[sequence.length - 1];
+
+      const sum = sequence.reduce((a, b) => a + b, 0);
+      const mean = sum / sequence.length;
+      const median = (sequence.length % 2) === 1 ?
+        sequence[Math.floor(sequence.length / 2)] :
+        (sequence[sequence.length / 2 - 1] + sequence[sequence.length / 2]) / 2;
+
+      return {min, max, mean, median}; // no mode, sorry
+    };
+
+    const {
+      min: minWaitTime,
+      max: maxWaitTime,
+      mean: meanWaitTime,
+      median: medianWaitTime,
+    } = makeStats([...state.resolvedTasks.values()].map(({createdTime, startedTime}) => startedTime - createdTime));
+
+    return {minWaitTime, maxWaitTime, meanWaitTime, medianWaitTime};
+  }
+
   /**
    * Collect all of the summary statistics, in the form {title, description, value}
    */
   get summaryStatistics() {
-    const {datastore, overProvisionedWorkers, overProvisionedTime} = this;
+    const {
+      datastore,
+      overProvisionedWorkers,
+      overProvisionedTime,
+      waitTimeStats,
+    } = this;
     const statistics = [];
 
     const msToHuman = value => {
@@ -86,12 +118,12 @@ class Analysis {
         return `${value} ms`;
       } else {
         const fmt = formatDistance(
-            new Date(0),
-            new Date(value),
+          new Date(0),
+          new Date(value),
         );
         return `${fmt} (${value} ms)`;
       }
-    }
+    };
 
     statistics.push({
       title: 'Number of Events',
@@ -118,6 +150,34 @@ class Analysis {
       title: 'Overprovisioned Worker Time',
       description: 'Total time overprovisioned workers (those which did no work) ran.',
       value: overProvisionedTime,
+      display: msToHuman,
+    });
+
+    statistics.push({
+      title: 'Minimum wait time',
+      description: 'Minimum time between task creation and start',
+      value: waitTimeStats.minWaitTime,
+      display: msToHuman,
+    });
+
+    statistics.push({
+      title: 'Maximum wait time',
+      description: 'Maximum time between task creation and start',
+      value: waitTimeStats.maxWaitTime,
+      display: msToHuman,
+    });
+
+    statistics.push({
+      title: 'Mean wait time',
+      description: 'Mean time between task creation and start',
+      value: waitTimeStats.meanWaitTime,
+      display: msToHuman,
+    });
+
+    statistics.push({
+      title: 'Median wait time',
+      description: 'Median time between task creation and start',
+      value: waitTimeStats.medianWaitTime,
       display: msToHuman,
     });
 
