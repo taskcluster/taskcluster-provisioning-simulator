@@ -8,7 +8,7 @@ class SimpleSimulator extends Simulator {
     super(options);
 
     this.rampUpTime = 10000;
-    this.runTime = commandOptions.duration ? parseInt(commandOptions.duration, 10) : 10000;
+    this.runTime = commandOptions.duration ? parseInt(commandOptions.duration, 10) : 10000000;
     this.rampDownTime = 20000;
   }
 
@@ -33,6 +33,7 @@ class SimpleSimulator extends Simulator {
         queue: this.queue,
         startupDelay: 2000,
         idleTimeout: 10000,
+        stoppingDelay: 2000,
       }),
     });
   }

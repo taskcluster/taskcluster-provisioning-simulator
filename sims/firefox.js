@@ -35,6 +35,7 @@ class FirefoxSimulator extends Simulator {
         queue: this.queue,
         startupDelay: 20000,
         idleTimeout: 1000 * 60 * 15,
+        stoppingDelay: 200000,
       }),
     });
   }

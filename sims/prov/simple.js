@@ -22,6 +22,7 @@ class SimpleEstimateProvisioner extends Provisioner {
 
     this.requestedWorkers = new Map();
     this.runningWorkers = new Map();
+    this.stoppingWorkers = new Map();
   }
 
   start() {
@@ -31,7 +32,7 @@ class SimpleEstimateProvisioner extends Provisioner {
   // taken directly from worker-manager, omitting logging and monitoring stuff
   simple({minCapacity, maxCapacity, scalingRatio, workerInfo}) {
     const pendingTasks = this.queue.pendingTasks();
-    const {existingCapacity, requestedCapacity = 0} = workerInfo;
+    const {existingCapacity, stoppingCapacity = 0, requestedCapacity = 0} = workerInfo;
 
     // First we find the amount of capacity we want. This is a very simple approximation
     // We add existingCapacity here to make the min/max stuff work and then remove it to
@@ -42,7 +43,7 @@ class SimpleEstimateProvisioner extends Provisioner {
 
     // Workers turn themselves off so we just return a positive number for
     // how many extra we want if we do want any
-    const toSpawn = Math.max(0, desiredCapacity - existingCapacity);
+    const toSpawn = Math.max(0, desiredCapacity - existingCapacity - stoppingCapacity);
 
     // subtract the instances that are starting up from that number to spawn
     // if the value is <= 0, than we don't need to spawn any new instance
@@ -53,6 +54,7 @@ class SimpleEstimateProvisioner extends Provisioner {
     const workerInfo = {
       existingCapacity: this.runningWorkers.size,
       requestedCapacity: this.requestedWorkers.size,
+      stoppingCapacity: this.stoppingWorkers.size,
     };
 
     let toSpawn = this.simple({
@@ -72,8 +74,12 @@ class SimpleEstimateProvisioner extends Provisioner {
         this.requestedWorkers.delete(worker.name);
         this.runningWorkers.set(worker.name, worker);
       });
-      worker.once('shutdown', () => {
+      worker.once('stopping', () => {
+        this.stoppingWorkers.set(worker.name, worker);
         this.runningWorkers.delete(worker.name);
+      });
+      worker.once('shutdown', () => {
+        this.stoppingWorkers.delete(worker.name);
       });
     }
   }

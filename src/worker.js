@@ -11,12 +11,13 @@ let NEXT_WORKER = 10000;
  * - 'shutdown' -- when they shut down due to being idle
  */
 class Worker extends Component {
-  constructor({core, queue, name, startupDelay, interTaskDelay = 0, idleTimeout, capacity = 1, utility = 1}) {
+  constructor({core, queue, name, startupDelay, interTaskDelay = 0, shutdownDelay = 0, idleTimeout, capacity = 1, utility = 1}) {
     super({core, name: name || `w-${NEXT_WORKER++}`});
     this.queue = queue;
     this.startupDelay = startupDelay;
     this.interTaskDelay = interTaskDelay;
     this.idleTimeout = idleTimeout;
+    this.shutdownDelay = shutdownDelay;
     this.capacity = capacity;
     this.utility = utility;
 
@@ -121,8 +122,12 @@ class Worker extends Component {
 
   shutdown() {
     this.workerRunning = false;
-    this.log('shutdown');
-    this.emit('shutdown');
+    this.log('stopping');
+    this.emit('stopping');
+    this.core.setTimeout(() => {
+      this.log('shutdown');
+      this.emit('shutdown');
+    }, this.shutdownDelay);
   }
 }
 
