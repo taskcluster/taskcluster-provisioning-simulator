@@ -1,5 +1,5 @@
-const assert = require('assert');
-const {Component} = require('./component');
+const assert = require("assert");
+const { Component } = require("./component");
 
 let NEXT_WORKER = 10000;
 
@@ -11,8 +11,19 @@ let NEXT_WORKER = 10000;
  * - 'shutdown' -- when they shut down due to being idle
  */
 class Worker extends Component {
-  constructor({core, queue, name, startupDelay, interTaskDelay = 0, shutdownDelay = 0, idleTimeout, capacity = 1, utility = 1}) {
-    super({core, name: name || `w-${NEXT_WORKER++}`});
+  constructor({
+    core,
+    queue,
+    name,
+    startupDelay,
+    interTaskDelay = 0,
+    shutdownDelay = 0,
+    idleTimeout,
+    capacity = 1,
+    utility = 1,
+    failureRate = 0,
+  }) {
+    super({ core, name: name || `w-${NEXT_WORKER++}` });
     this.queue = queue;
     this.startupDelay = startupDelay;
     this.interTaskDelay = interTaskDelay;
@@ -20,6 +31,8 @@ class Worker extends Component {
     this.shutdownDelay = shutdownDelay;
     this.capacity = capacity;
     this.utility = utility;
+    // add some randomness to the failure rate where workers start but fail to claim tasks
+    this.failToClaimTasks = failureRate > Math.random();
 
     this.workerRunning = true;
 
@@ -56,6 +69,12 @@ class Worker extends Component {
 
     if (this.core.now() - this.idleSince >= this.idleTimeout) {
       this.shutdown();
+      return;
+    }
+
+    if (this.failToClaimTasks) {
+      // just wait to be shut down
+      this.startIdleTimeout();
       return;
     }
 

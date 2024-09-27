@@ -73,6 +73,13 @@ class Queue extends Component {
   }
 
   /**
+   * Get the count of claimed tasks
+   */
+  claimedTasks() {
+    return this._runningTasks.size;
+  }
+
+  /**
    * Indicate that a task is finished
    */
   resolveTask(taskId) {

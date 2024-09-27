@@ -2,6 +2,20 @@ import React from 'react';
 import formatDistance from 'date-fns/formatDistance';
 import DataStoreContext from './datastore';
 
+const makeStats = sequence => {
+  sequence.sort((a, b) => a - b);
+  const min = sequence[0];
+  const max = sequence[sequence.length - 1];
+
+  const sum = sequence.reduce((a, b) => a + b, 0);
+  const mean = sum / sequence.length;
+  const median = (sequence.length % 2) === 1 ?
+    sequence[Math.floor(sequence.length / 2)] :
+    (sequence[sequence.length / 2 - 1] + sequence[sequence.length / 2]) / 2;
+
+  return {min, max, mean, median}; // no mode, sorry
+};
+
 /**
  * A singleton class for calculating analysis of a run.
  *
@@ -75,20 +89,6 @@ class Analysis {
   get waitTimeStats() {
     const {state} = this.analyze({interval: Infinity, metrics: {}});
 
-    const makeStats = sequence => {
-      sequence.sort((a, b) => a - b);
-      const min = sequence[0];
-      const max = sequence[sequence.length - 1];
-
-      const sum = sequence.reduce((a, b) => a + b, 0);
-      const mean = sum / sequence.length;
-      const median = (sequence.length % 2) === 1 ?
-        sequence[Math.floor(sequence.length / 2)] :
-        (sequence[sequence.length / 2 - 1] + sequence[sequence.length / 2]) / 2;
-
-      return {min, max, mean, median}; // no mode, sorry
-    };
-
     const {
       min: minWaitTime,
       max: maxWaitTime,
@@ -97,6 +97,23 @@ class Analysis {
     } = makeStats([...state.resolvedTasks.values()].map(({createdTime, startedTime}) => startedTime - createdTime));
 
     return {minWaitTime, maxWaitTime, meanWaitTime, medianWaitTime};
+  }
+
+  get tasksPerWorkerStats() {
+    const {finalState} = this;
+    const resolvedTasksSize = (workers) => workers.values().map(w => w.resolvedTasks.size);
+
+    const {
+      min: minTasksPerWorker,
+      max: maxTasksPerWorker,
+      mean: meanTasksPerWorker,
+      median: medianTasksPerWorker,
+    } = makeStats([
+      ...resolvedTasksSize(finalState.runningWorkers),
+      ...resolvedTasksSize(finalState.shutdownWorkers),
+    ]);
+
+    return {minTasksPerWorker, maxTasksPerWorker, meanTasksPerWorker, medianTasksPerWorker};
   }
 
   /**
@@ -108,8 +125,11 @@ class Analysis {
       overProvisionedWorkers,
       overProvisionedTime,
       waitTimeStats,
+      tasksPerWorkerStats,
     } = this;
     const statistics = [];
+
+    const {state} = this.analyze({interval: Infinity, metrics: {}});
 
     const msToHuman = value => {
       if (value === 0) {
@@ -137,6 +157,27 @@ class Analysis {
       description: 'Total duration of the simulation phase.',
       value: datastore.duration,
       display: msToHuman,
+    });
+
+    statistics.push({
+      title: 'Requested Workers',
+      description: 'Number of workers that were requested.',
+      value: state.requestedWorkers.size,
+      display: value => `${value} workers requested`,
+    });
+
+    statistics.push({
+      title: 'Running Workers',
+      description: 'Number of workers currently running.',
+      value: state.runningWorkers.size,
+      display: value => `${value} workers running`,
+    });
+
+    statistics.push({
+      title: 'Shutdown Workers',
+      description: 'Number of workers that started up, did some work, and shut down.',
+      value: state.shutdownWorkers.size,
+      display: value => `${value} workers shutdown`,
     });
 
     statistics.push({
@@ -179,6 +220,34 @@ class Analysis {
       description: 'Median time between task creation and start',
       value: waitTimeStats.medianWaitTime,
       display: msToHuman,
+    });
+
+    statistics.push({
+      title: 'Minimum tasks per worker',
+      description: 'Minimum number of tasks resolved by a worker',
+      value: tasksPerWorkerStats.minTasksPerWorker,
+      display: value => `${value} tasks`,
+    });
+
+    statistics.push({
+      title: 'Maximum tasks per worker',
+      description: 'Maximum number of tasks resolved by a worker',
+      value: tasksPerWorkerStats.maxTasksPerWorker,
+      display: value => `${value} tasks`,
+    });
+
+    statistics.push({
+      title: 'Mean tasks per worker',
+      description: 'Mean number of tasks resolved by a worker',
+      value: tasksPerWorkerStats.meanTasksPerWorker,
+      display: value => `${value} tasks`,
+    });
+
+    statistics.push({
+      title: 'Median tasks per worker',
+      description: 'Median number of tasks resolved by a worker',
+      value: tasksPerWorkerStats.medianTasksPerWorker,
+      display: value => `${value} tasks`,
     });
 
     return statistics;

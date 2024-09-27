@@ -26,7 +26,7 @@ class SimpleSimulator extends Simulator {
       core: this.core,
       queue: this.queue,
       minCapacity: 0,
-      maxCapacity: 5,
+      maxCapacity: 10,
       scalingRatio: 1.0,
       workerFactory: () => new Worker({
         core: this.core,
@@ -34,6 +34,7 @@ class SimpleSimulator extends Simulator {
         startupDelay: 2000,
         idleTimeout: 10000,
         stoppingDelay: 2000,
+        failureRate: 0.0002,
       }),
     });
   }

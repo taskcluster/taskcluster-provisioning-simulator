@@ -12,8 +12,15 @@ const {Provisioner} = require('../..');
  * - workerFactory -- a callable that will create a new worker
  */
 class SimpleEstimateProvisioner extends Provisioner {
-  constructor({core, queue, minCapacity, maxCapacity, scalingRatio, workerFactory}) {
-    super({core});
+  constructor({
+    core,
+    queue,
+    minCapacity,
+    maxCapacity,
+    scalingRatio,
+    workerFactory,
+  }) {
+    super({ core });
     this.queue = queue;
     this.minCapacity = minCapacity;
     this.maxCapacity = maxCapacity;
@@ -30,20 +37,51 @@ class SimpleEstimateProvisioner extends Provisioner {
   }
 
   // taken directly from worker-manager, omitting logging and monitoring stuff
-  simple({minCapacity, maxCapacity, scalingRatio, workerInfo}) {
-    const pendingTasks = this.queue.pendingTasks();
-    const {existingCapacity, stoppingCapacity = 0, requestedCapacity = 0} = workerInfo;
+  simple({
+    workerPoolId,
+    minCapacity,
+    maxCapacity,
+    scalingRatio = 1,
+    workerInfo: {
+      existingCapacity,
+      stoppingCapacity = 0,
+      requestedCapacity = 0,
+    },
+  }) {
+    const pendingTasks = this.queue.pendingTasks(workerPoolId);
+    const claimedTasks = this.queue.claimedTasks(workerPoolId);
+
+    // find out how many of the existing capacity are idle
+    const totalIdleCapacity = existingCapacity - claimedTasks;
+
+    // we assume that idle workers are going to pick up tasks soon
+    const adjustedPendingTasks = Math.max(0, pendingTasks - totalIdleCapacity);
+
+    // Due to the fact that workers could fail to start on azure, deprovisioning will take significant amount of time
+    // and on the next provision loop, those workers wouldn't be considered as requested or existing capacity
+    // so worker manager would try to provision for this pool again
+    // workers in stopping state would keep growing, and deprovisioning takes many calls, even though it wasn't created
+    // to avoid this situation we would take into account stopping capacity and don't allow worker pool
+    // to have existing + stopping capacity > max capacity to prevent affected pool start extra instances
+    const totalNonStopped = existingCapacity + stoppingCapacity;
 
     // First we find the amount of capacity we want. This is a very simple approximation
-    // We add existingCapacity here to make the min/max stuff work and then remove it to
-    // decide how much more to request. In other words, we will ask to spawn
-    // enough capacity to cover all pending tasks at any time unless it would
-    // create more than maxCapacity instances
-    const desiredCapacity = Math.max(minCapacity, Math.min(pendingTasks * scalingRatio + existingCapacity, maxCapacity));
+    // We add totalNonStopped here to represent existing workers and subtract it later.
+    // We scale up based on the scaling ratio and number of pending tasks.
+    // We ask to spawn as much capacity as the scaling ratio dictates to cover all
+    // pending tasks at any time unless it would create more than maxCapacity instances
+    const desiredCapacity = Math.max(
+      minCapacity,
+      // only scale as high as maxCapacity
+      Math.min(
+        adjustedPendingTasks * scalingRatio + totalNonStopped,
+        maxCapacity,
+      ),
+    );
 
     // Workers turn themselves off so we just return a positive number for
     // how many extra we want if we do want any
-    const toSpawn = Math.max(0, desiredCapacity - existingCapacity - stoppingCapacity);
+    const toSpawn = Math.max(0, desiredCapacity - totalNonStopped);
 
     // subtract the instances that are starting up from that number to spawn
     // if the value is <= 0, than we don't need to spawn any new instance

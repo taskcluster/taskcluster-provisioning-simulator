@@ -95,6 +95,18 @@ suite('Worker', function() {
     ]);
   });
 
+  test('failing to claim any tasks', function() {
+    at(0, () => makeWorker({idleTimeout: 100, failureRate: 1}));
+    at(50, () => queue.createTask('t1', {duration: 20}));
+    core.run(400);
+
+    assertEvents([
+      [ 0, 'worker-requested', 'wkr' ],
+      [ 0, 'worker-started', 'wkr' ],
+      [ 100, 'worker-shutdown', 'wkr' ],
+    ]);
+  });
+
   test('claim a pending task after finishing a task', function() {
     at(0, () => makeWorker({}));
     at(10, () => queue.createTask('t1', {duration: 20}));

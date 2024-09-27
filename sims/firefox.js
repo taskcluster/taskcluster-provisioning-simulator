@@ -36,6 +36,7 @@ class FirefoxSimulator extends Simulator {
         startupDelay: 20000,
         idleTimeout: 1000 * 60 * 15,
         stoppingDelay: 200000,
+        failureRate: 0.0002,
       }),
     });
   }
